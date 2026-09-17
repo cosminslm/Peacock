@@ -9,6 +9,14 @@ and
 content to the game, and allows for other enhancements to be made while in
 online mode.
 
+> **Playing the game (not developing):** this Git checkout is source code.
+> It is **not** a playable release. Do not run `PeacockPatcher.exe` from here
+> and expect HITMAN WOA to go offline. Use the Windows kit in
+> [`offline-kit/`](offline-kit/README.md) (`Diagnostica.cmd` →
+> `ScaricaRelease.cmd` → `EsclusioneDefender.cmd` → `Gioca.cmd`), which
+> downloads the official packaged zip (`chunk0.js` + `nodedist` + matching
+> patcher) from GitHub Releases.
+
 ## Installation
 
 Install [Node.js](https://nodejs.org/en/). Use the Latest version, or the
