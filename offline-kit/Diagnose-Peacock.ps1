@@ -20,8 +20,7 @@ if (Test-IsAdministrator) {
     Write-Ok 'Sessione con privilegi amministratore.'
     $okCount++
 } else {
-    Write-WarnLine 'NON sei amministratore. Il patcher e il server (porta 80) richiedono Run as administrator.'
-    [void]$issues.Add('Lancia i .cmd / PowerShell come amministratore.')
+    Write-WarnLine 'Questa diagnostica non serve admin. Per GIOCARE: Gioca.cmd / EsclusioneDefender.cmd come amministratore.'
 }
 
 Write-Step '2. Installazioni Peacock trovate'
@@ -40,7 +39,7 @@ foreach ($dir in (Get-CandidatePeacockDirs)) {
         Write-WarnLine "SORGENTE (non giocabile)  v$ver  ->  $dir"
         Write-Host "         Manca chunk0.js / nodedist. Il pulsante GitHub 'Download ZIP' NON e una release." -ForegroundColor DarkYellow
         $foundSource = $true
-        [void]$issues.Add("Hai il codice sorgente in $dir. Serve Peacock-vX.Y.Z.zip dalla pagina Releases.")
+        Write-Host '         Ignora questa cartella. Non la usare per giocare.' -ForegroundColor DarkYellow
     } else {
         Write-Info "Cartella presente ma incompleta: $dir (versione $ver)"
     }
@@ -48,9 +47,11 @@ foreach ($dir in (Get-CandidatePeacockDirs)) {
 if (-not $foundPackaged) {
     Write-ErrLine 'Nessuna release packaged trovata (chunk0.js + nodedist + PeacockPatcher.exe).'
     [void]$issues.Add('Esegui ScaricaRelease.cmd per scaricare la release ufficiale.')
+} elseif ($foundSource) {
+    Write-Info 'Il source in Downloads non blocca: hai gia una installazione packaged.'
 }
 
-$unique = $versions | Select-Object -Unique
+$unique = @($versions | Select-Object -Unique)
 if ($unique.Count -gt 1) {
     Write-WarnLine ("Mismatch di versione: " + ($unique -join '  vs  '))
     Write-Host '         Server e patcher DEVONO provenire dalla stessa release.' -ForegroundColor DarkYellow

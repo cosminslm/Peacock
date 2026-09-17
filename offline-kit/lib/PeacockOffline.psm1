@@ -100,19 +100,41 @@ function Get-PeacockVersionFromDir {
     if (Test-Path -LiteralPath $pkg) {
         try {
             $j = Get-Content -LiteralPath $pkg -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($j.version -and $j.version -match '^[678]\.') { return [string]$j.version }
             if ($j.version) { return [string]$j.version }
         } catch {}
     }
     $chunk = Join-Path $Dir 'chunk0.js'
     if (Test-Path -LiteralPath $chunk) {
-        $head = Get-Content -LiteralPath $chunk -TotalCount 80 -ErrorAction SilentlyContinue
-        foreach ($line in $head) {
-            if ($line -match '(\d+\.\d+\.\d+)') { return $Matches[1] }
+        $text = $null
+        try {
+            $fs = [System.IO.File]::Open($chunk, 'Open', 'Read', 'ReadWrite')
+            try {
+                $len = [Math]::Min(512kb, $fs.Length)
+                $buf = New-Object byte[] $len
+                [void]$fs.Read($buf, 0, $len)
+                $text = [System.Text.Encoding]::UTF8.GetString($buf)
+            } finally { $fs.Close() }
+        } catch {
+            $text = Get-Content -LiteralPath $chunk -TotalCount 5 -Raw -ErrorAction SilentlyContinue
         }
-        $text = Get-Content -LiteralPath $chunk -Raw -ErrorAction SilentlyContinue
-        if ($text -and $text.Length -gt 0) {
-            if ($text -match 'Peacock v(\d+\.\d+\.\d+)') { return $Matches[1] }
-            if ($text -match '"version":"(\d+\.\d+\.\d+)"') { return $Matches[1] }
+        if ($text) {
+            foreach ($re in @(
+                    'This is Peacock v(\d+\.\d+\.\d+)',
+                    'Peacock v(\d+\.\d+\.\d+)',
+                    'HUMAN_VERSION["''`:\s=]+(\d+\.\d+\.\d+)'
+                )) {
+                if ($text -match $re) { return $Matches[1] }
+            }
+            $found = [regex]::Matches($text, '(?<!\d)([678]\.\d+\.\d+)(?!\d)')
+            if ($found.Count -gt 0) { return $found[0].Groups[1].Value }
+        }
+    }
+    $patcher = Join-Path $Dir 'PeacockPatcher.exe'
+    if (Test-Path -LiteralPath $patcher) {
+        $p = Get-Item -LiteralPath $patcher
+        if ($p.Length -ge 280000 -and $p.Length -le 320000 -and $p.LastWriteTime.Year -eq 2023) {
+            return '6.5.x (2023, da data patcher)'
         }
     }
     return 'sconosciuta'
@@ -295,8 +317,8 @@ function Get-DefenderStatusForPath {
     }
     try {
         $null = Get-Command Get-MpPreference -ErrorAction Stop
+        $pref = Get-MpPreference -ErrorAction Stop
         $result.Available = $true
-        $pref = Get-MpPreference
         if ($pref.ExclusionPath) {
             foreach ($ex in $pref.ExclusionPath) {
                 if ($Path -and ($Path.StartsWith($ex, [StringComparison]::OrdinalIgnoreCase) -or $ex.StartsWith($Path, [StringComparison]::OrdinalIgnoreCase))) {
