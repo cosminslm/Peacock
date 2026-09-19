@@ -33,6 +33,7 @@ jobs:
           7z l "$F" > analysis/7z-listing.txt 2>&1
           7z l -slt "$F" > analysis/7z-listing-slt.txt 2>&1
           echo "=== 7z ==="; tail -40 analysis/7z-listing.txt
+          exit 0
 
       - name: Build innoextract variants
         run: |
@@ -56,6 +57,7 @@ jobs:
               echo "$NAME build FAILED"; tail -3 /tmp/cmake-$NAME.log 2>/dev/null; tail -3 /tmp/make-$NAME.log 2>/dev/null
             fi
           done
+          exit 0
 
       - name: Try new innoextract on the file
         run: |
@@ -73,6 +75,7 @@ jobs:
           # if any extraction tool can list, also try full extraction to a scratch dir for inspection
           BEST=$(for B in /tmp/innoextract-*; do "$B" -l "$F" 2>/dev/null | grep -c "\->" ; done 2>/dev/null | sort -rn | head -1)
           echo "best list line count: $BEST"
+          exit 0
 
       - name: Commit analysis back
         run: |
@@ -81,5 +84,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add analysis/
           git commit -m "chore: deep analysis of HITMAN 3 patch installer [skip ci]"
-          git push origin arena/01a0babf-peacock
+          git pull --rebase origin arena/01a0babf-peacock || true
+          git push origin arena/01a0babf-peacock || true
           echo done
+          exit 0
