@@ -1,0 +1,22 @@
+=== official v8.9.1 top-level ===
+total 36784
+drwxr-xr-x  3 runner runner     4096 Sep 19 17:57 .
+drwxrwxrwt 17 root   root       4096 Sep 19 17:57 ..
+drwxr-xr-x  5 runner runner     4096 Sep 13 00:53 Peacock-v8.9.1
+-rw-r--r--  1 runner runner 37650449 Sep 19 17:57 peacock.zip
+=== chunk0.js hashes ===
+06d56dca750233f461d49880b479e8983f7c0d8ae1909f54c88887fb841143a0  /tmp/extracted/app/Peacock/chunk0.js
+973d6f91764a709b787ee0df6584b38766a768d4e6540b62deedad055b93189a  ./Peacock-v8.9.1/chunk0.js
+=== webui assets hashes (bundle) ===
+9f15d5a01c8a825aeec275450c7f873e89f76a00c2ed298b7c3fab13cc7502fa  webui/dist/index.html
+7d81d3f408a88d96baea17251bce36ca77915c70f1077bf5e73bd4512f9db534  webui/dist/assets/index-NtA75SgD.js
+f33fd92ab92213e2b965ca696dd509cc7e7627b6b9b67c9c77ffe48f79b74456  webui/dist/assets/index-3_zqFWj_.css
+f01d2b220ec879f7ebf0a8fcc8e384403f43a2c4cd1ec2fb59f3c521cad1d922  webui/dist/THIRDPARTYNOTICES.txt
+=== verdict ===
+chunk0.js DIFFERS from official v8.9.1 (may be older/newer version)
+"version":"3.13.0"
+versions.node.split(".")[0]
+version":"3.13.0","author":
+version=i,s}t.exports=funct
+version"in e&&(t.conversion
+version),t}(i),r[e][a].raw=
