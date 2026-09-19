@@ -22,62 +22,58 @@ jobs:
       - name: Install tools
         run: |
           set +e
-          sudo apt-get update -qq
+          mkdir -p analysis/buildlogs
+          sudo apt-get update > analysis/buildlogs/apt.log 2>&1
           sudo apt-get install -y p7zip-full cmake g++ \
             libboost-iostreams-dev libboost-filesystem-dev libboost-system-dev \
-            libboost-program-options-dev libboost-date-time-dev
-          exit 0
-
-      - name: 7-Zip listing
-        run: |
-          set +e
-          F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          mkdir -p analysis
-          7z l "$F" > analysis/7z-listing.txt 2>&1
-          7z l -slt "$F" > analysis/7z-listing-slt.txt 2>&1
-          echo "=== 7z ==="; tail -40 analysis/7z-listing.txt
+            libboost-program-options-dev libboost-date-time-dev >> analysis/buildlogs/apt.log 2>&1
+          echo "apt exit: $?" >> analysis/buildlogs/apt.log
+          which cmake g++ 7z >> analysis/buildlogs/apt.log 2>&1
           exit 0
 
       - name: Build innoextract variants
         run: |
           set +e
           cd /tmp
-          for REF in "pr214:refs/pull/214/head" "pr212:refs/pull/212/head" "pr208:refs/pull/208/head" "master:master"; do
+          for REF in "master:master" "pr214:refs/pull/214/head" "pr212:refs/pull/212/head"; do
             NAME="${REF%%:*}"; REFSPEC="${REF#*:}"
-            echo "=== building $NAME ($REFSPEC) ==="
-            curl -sL -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/$REFSPEC"
-            [ -s src.tar.gz ] || { echo "download failed for $NAME"; continue; }
-            rm -rf /tmp/isrc && mkdir -p /tmp/isrc
-            tar xzf src.tar.gz -C /tmp/isrc 2>/dev/null
-            D=$(find /tmp/isrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
-            [ -n "$D" ] || { echo "no source dir for $NAME"; continue; }
-            mkdir -p "$D/build"
-            ( cd "$D/build" && cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cmake-$NAME.log 2>&1 && make -j4 > /tmp/make-$NAME.log 2>&1 )
-            if [ -f "$D/build/innoextract" ]; then
-              cp "$D/build/innoextract" /tmp/innoextract-$NAME
-              echo "$NAME built OK"
-            else
-              echo "$NAME build FAILED"; tail -3 /tmp/cmake-$NAME.log 2>/dev/null; tail -3 /tmp/make-$NAME.log 2>/dev/null
-            fi
+            LOG="$GITHUB_WORKSPACE/analysis/buildlogs/build-$NAME.log"
+            {
+              echo "=== building $NAME ($REFSPEC) ==="
+              curl -sL -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/$REFSPEC"
+              echo "curl exit: $? size: $(stat -c%s src.tar.gz 2>/dev/null)"
+              [ -s src.tar.gz ] || { echo "download failed for $NAME"; continue; }
+              rm -rf /tmp/isrc && mkdir -p /tmp/isrc
+              tar xzf src.tar.gz -C /tmp/isrc
+              echo "tar exit: $?"
+              D=$(find /tmp/isrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
+              echo "src dir: $D"
+              [ -n "$D" ] || continue
+              mkdir -p "$D/build"
+              cd "$D/build"
+              cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -25
+              echo "cmake exit: ${PIPESTATUS[0]}"
+              make -j4 2>&1 | tail -25
+              echo "make exit: ${PIPESTATUS[0]}"
+              ls -la innoextract 2>/dev/null || echo "binary missing"
+              cd /tmp
+            } > "$LOG" 2>&1
+            [ -f "$D/build/innoextract" ] && cp "$D/build/innoextract" /tmp/innoextract-$NAME
           done
+          ls -la /tmp/innoextract-* 2>/dev/null || echo "NO BINARIES BUILT"
           exit 0
 
-      - name: Try new innoextract on the file
+      - name: Run innoextract variants on the file
         run: |
           set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
           for BIN in /tmp/innoextract-*; do
+            [ -x "$BIN" ] || continue
             N=$(basename "$BIN")
-            echo "=== $N ==="
             "$BIN" -i "$F" > "analysis/inno-info-$N.txt" 2>&1
             "$BIN" -l "$F" > "analysis/inno-list-$N.txt" 2>&1
-            head -30 "analysis/inno-info-$N.txt"
-            echo "--- list (first 50 lines) ---"
-            head -50 "analysis/inno-list-$N.txt"
+            "$BIN" -s -d /tmp/extracted-$N "$F" > "analysis/inno-extract-$N.log" 2>&1
           done
-          # if any extraction tool can list, also try full extraction to a scratch dir for inspection
-          BEST=$(for B in /tmp/innoextract-*; do "$B" -l "$F" 2>/dev/null | grep -c "\->" ; done 2>/dev/null | sort -rn | head -1)
-          echo "best list line count: $BEST"
           exit 0
 
       - name: Commit analysis back
@@ -85,9 +81,8 @@ jobs:
           set +e
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add analysis/
-          git commit -m "chore: deep analysis of HITMAN 3 patch installer [skip ci]"
+          git add -A analysis/
+          git commit -m "chore: innoextract build logs + extraction attempt [skip ci]"
           git pull --rebase origin arena/01a0babf-peacock || true
           git push origin arena/01a0babf-peacock || true
-          echo done
           exit 0
