@@ -1,4 +1,7 @@
 #Requires -Version 5.1
+param(
+    [switch]$RequireOffline
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -26,6 +29,22 @@ function Stop-OwnedProcess {
 Write-Host ''
 Write-Host '  HITMAN WOA  -  PEACOCK LOCALE (zero download)' -ForegroundColor Magenta
 Write-Host ''
+
+if ($RequireOffline) {
+    $offlineOk = Write-OfflineProbe
+    if (-not $offlineOk) {
+        Write-Host 'Premi un tasto per uscire (disconnetti la rete e rilancia).' -ForegroundColor DarkGray
+        if ($Host.Name -eq 'ConsoleHost') { [void][System.Console]::ReadKey($true) }
+        exit 2
+    }
+} else {
+    Write-Step 'Rete'
+    if (Test-InternetReachable) {
+        Write-Info 'Internet presente. Per la prova da viaggio usa ProvaOffline.cmd (Wi-Fi spento).'
+    } else {
+        Write-Ok 'Nessuna internet: stesso scenario del viaggio.'
+    }
+}
 
 $cfg = Read-LocaleConfig
 $peacockDir = [string]$cfg.peacockDir

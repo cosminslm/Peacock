@@ -207,4 +207,28 @@ function Test-Port80IsThisPeacock {
     return $false
 }
 
+function Test-InternetReachable {
+    try {
+        $client = New-Object System.Net.Sockets.TcpClient
+        $iar = $client.BeginConnect('1.1.1.1', 443, $null, $null)
+        $ok = $iar.AsyncWaitHandle.WaitOne(1500, $false)
+        $connected = $ok -and $client.Connected
+        try { $client.Close() } catch {}
+        return [bool]$connected
+    } catch {
+        return $false
+    }
+}
+
+function Write-OfflineProbe {
+    Write-Step 'Prova rete (come in viaggio)'
+    if (Test-InternetReachable) {
+        Write-WarnLine 'Internet ANCORA raggiungibile. Questa NON e una prova offline.'
+        Write-Host 'Spegni Wi-Fi / stacca cavo / aereo, poi rilancia ProvaOffline.cmd.' -ForegroundColor Yellow
+        return $false
+    }
+    Write-Ok 'Nessuna rete verso internet. Prova offline valida. Peacock usa solo 127.0.0.1.'
+    return $true
+}
+
 Export-ModuleMember -Function * -Alias *

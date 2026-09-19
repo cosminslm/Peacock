@@ -17,4 +17,9 @@ Avvia **solo** Peacock che hai già sul disco:
 3. Hub → Planning → Start. Non Continua/Carica.
 4. Esci dal gioco, aspetta 10 secondi, premi Q.
 
-`config.json` è già puntato a quella cartella. Cambialo solo se Peacock sta altrove (stesso `userdata`).
+## Prova senza internet (ora, a casa)
+
+1. Spegni Wi-Fi / cavo.
+2. **`ProvaOffline.cmd`** (admin). Se vede ancora rete, esce.
+3. Hub → Planning → Start.
+4. Incolla se: Peacock parte, patcher `127.0.0.1`, hub con mappe oppure «richiedi accesso».
