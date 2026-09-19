@@ -21,13 +21,13 @@ function Get-ConfigPath {
 
 function Get-DefaultConfig {
     [pscustomobject]@{
-        peacockDir           = 'C:\Games\HITMAN - World of Assassination\Peacock'
+        peacockDir           = (Join-Path $env:USERPROFILE 'Documents\Peacock')
         gameExe              = 'C:\Games\HITMAN - World of Assassination\Retail\HITMAN3.exe'
         serverUrl            = '127.0.0.1'
         launchGame           = $true
         stopOnGameExit       = $false
         applyOfflineOptions  = $true
-        preferredInstallDir  = 'C:\Games\HITMAN - World of Assassination\Peacock'
+        preferredInstallDir  = (Join-Path $env:USERPROFILE 'Documents\Peacock')
     }
 }
 
