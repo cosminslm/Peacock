@@ -160,15 +160,147 @@ function Get-CandidatePeacockDirs {
     return $list
 }
 
+function Get-UserdataScore {
+    param([string]$Dir)
+    $users = Join-Path $Dir 'userdata\users'
+    if (-not (Test-Path -LiteralPath $users)) { return 0 }
+    $files = @(Get-ChildItem -LiteralPath $users -Filter '*.json' -ErrorAction SilentlyContinue)
+    if ($files.Count -eq 0) { return 0 }
+    $bytes = ($files | Measure-Object -Property Length -Sum).Sum
+    return [int](1000 + $files.Count * 10 + [Math]::Min($bytes, 5000000) / 1000)
+}
+
+function Get-UserdataSummary {
+    param([string]$Dir)
+    $users = Join-Path $Dir 'userdata\users'
+    if (-not (Test-Path -LiteralPath $users)) { return 'nessun profilo in userdata\users' }
+    $files = @(Get-ChildItem -LiteralPath $users -Filter '*.json' -ErrorAction SilentlyContinue)
+    if ($files.Count -eq 0) { return 'cartella userdata vuota' }
+    $names = $files | ForEach-Object { $_.BaseName.Substring(0, [Math]::Min(8, $_.BaseName.Length)) }
+    return ("{0} profilo/i: {1}" -f $files.Count, ($names -join ', '))
+}
+
 function Resolve-PackagedPeacockDir {
     param([switch]$AllowMissing)
     $cfg = Read-OfflineConfig
-    $candidates = Get-CandidatePeacockDirs
-    foreach ($dir in $candidates) {
-        if (Test-IsPackagedPeacock $dir) { return $dir }
+    $packaged = @()
+    foreach ($dir in (Get-CandidatePeacockDirs)) {
+        if (Test-IsPackagedPeacock $dir) { $packaged += $dir }
     }
-    if ($AllowMissing) { return $null }
-    throw 'Nessuna installazione Peacock PRONTA (packaged) trovata. Esegui prima ScaricaRelease.cmd / Get-OfficialRelease.ps1.'
+    if ($packaged.Count -eq 0) {
+        if ($AllowMissing) { return $null }
+        throw 'Nessuna installazione Peacock PRONTA (packaged) trovata.'
+    }
+
+    # Prefer the folder that already has a player profile (mission/XP saves).
+    $ranked = $packaged | Sort-Object -Property @{ Expression = { Get-UserdataScore $_ } } -Descending
+    $best = $ranked | Select-Object -First 1
+    return $best
+}
+
+function Get-ProtectedPeacockNames {
+    @(
+        'userdata',
+        'contractSessions',
+        'options.ini',
+        'images',
+        'logs',
+        'plugins',
+        'contracts',
+        'config.json'
+    )
+}
+
+function Install-OfficialPeacockRelease {
+    param(
+        [string]$DestRoot,
+        [switch]$Force
+    )
+    $keep = Get-ProtectedPeacockNames
+
+    if (-not $Force -and (Test-IsPackagedPeacock $DestRoot)) {
+        Write-Ok "Release gia presente, non riscarico: $DestRoot"
+        Write-Info (Get-UserdataSummary $DestRoot)
+        return $false
+    }
+
+    $rel = Get-LatestPeacockRelease
+    Write-Info "Release da installare: $($rel.Tag)  $($rel.File)"
+    $tmp = Join-Path $env:TEMP $rel.File
+    Write-Host "Scarico $($rel.Url) ..."
+    Invoke-WebRequest -Uri $rel.Url -OutFile $tmp -UseBasicParsing
+    Write-Ok "Scaricato $((Get-Item $tmp).Length) byte"
+
+    if (-not (Test-Path -LiteralPath $DestRoot)) {
+        New-Item -ItemType Directory -Path $DestRoot | Out-Null
+    }
+
+    $extractTo = Join-Path $env:TEMP ("peacock-extract-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $extractTo | Out-Null
+    Expand-Archive -LiteralPath $tmp -DestinationPath $extractTo -Force
+    $inner = Get-ChildItem -LiteralPath $extractTo -Directory | Select-Object -First 1
+    if (-not $inner) { throw 'ZIP senza cartella interna.' }
+
+    Get-ChildItem -LiteralPath $inner.FullName | ForEach-Object {
+        if ($keep -contains $_.Name) {
+            Write-Info "Conservo $($_.Name) locale (progressi / opzioni)."
+            return
+        }
+        $target = Join-Path $DestRoot $_.Name
+        if (Test-Path -LiteralPath $target) {
+            Remove-Item -LiteralPath $target -Recurse -Force
+        }
+        Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse -Force
+    }
+
+    Remove-Item -LiteralPath $extractTo -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    Unblock-PeacockTree $DestRoot
+
+    if (-not (Test-IsPackagedPeacock $DestRoot)) {
+        throw "Estrazione incompleta in $DestRoot"
+    }
+    Write-Ok "Installato $($rel.Tag) in $DestRoot (userdata intatto)."
+    return $true
+}
+
+function Ensure-PackagedPeacock {
+    $existing = Resolve-PackagedPeacockDir -AllowMissing
+    if ($existing) {
+        Write-Ok "Uso Peacock gia installato (niente download)."
+        Write-Info $existing
+        Write-Info (Get-UserdataSummary $existing)
+        $cfg = Read-OfflineConfig
+        if ($cfg.peacockDir -ne $existing) {
+            $cfg.peacockDir = $existing
+            Save-OfflineConfig $cfg
+        }
+        return $existing
+    }
+
+    $cfg = Read-OfflineConfig
+    $dest = $cfg.preferredInstallDir
+    if (-not $dest -or $dest.Trim() -eq '') {
+        $dest = Join-Path $env:USERPROFILE 'Documents\Peacock'
+    }
+    Write-WarnLine "Nessuna release packaged. Download UNA TANTUM in $dest"
+    [void](Install-OfficialPeacockRelease -DestRoot $dest)
+    $cfg.peacockDir = $dest
+    $cfg.preferredInstallDir = $dest
+    Save-OfflineConfig $cfg
+    return $dest
+}
+
+function Try-AddDefenderExclusion {
+    param([string]$Dir)
+    if (-not (Test-IsAdministrator)) { return }
+    try {
+        $null = Get-Command Add-MpPreference -ErrorAction Stop
+        Add-MpPreference -ExclusionPath $Dir -ErrorAction Stop
+        Write-Ok "Esclusione Defender: $Dir"
+    } catch {
+        Write-Info "Defender non disponibile o AV di terze parti: aggiungi a mano l'esclusione su PeacockPatcher.exe."
+    }
 }
 
 function Find-HitmanExe {

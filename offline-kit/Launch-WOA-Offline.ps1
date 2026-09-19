@@ -16,7 +16,7 @@ function Stop-OwnedProcess {
     try {
         if (-not $Proc.HasExited) {
             $Proc.CloseMainWindow() | Out-Null
-            if (-not $Proc.WaitForExit(3000)) {
+            if (-not $Proc.WaitForExit(4000)) {
                 $Proc.Kill()
             }
         }
@@ -24,30 +24,18 @@ function Stop-OwnedProcess {
 }
 
 Write-Host ''
-Write-Host '  HITMAN WOA  -  AVVIO OFFLINE CON PEACOCK' -ForegroundColor Magenta
+Write-Host '  HITMAN WOA  -  UN SOLO AVVIO (admin)' -ForegroundColor Magenta
+Write-Host '  Server + patcher + gioco. La release si scarica solo se manca.' -ForegroundColor DarkGray
 Write-Host ''
 
 $cfg = Read-OfflineConfig
 
-Write-Step 'Verifica installazione packaged'
-try {
-    $peacockDir = Resolve-PackagedPeacockDir
-} catch {
-    Write-ErrLine $_.Exception.Message
-    Write-Host 'Esegui ScaricaRelease.cmd e riprova.'
-    if ($Host.Name -eq 'ConsoleHost') { [void][System.Console]::ReadKey($true) }
-    exit 1
-}
+Write-Step 'Peacock (niente re-download se gia c e)'
+$peacockDir = Ensure-PackagedPeacock
 $ver = Get-PeacockVersionFromDir $peacockDir
-Write-Ok "Peacock packaged v$ver"
-Write-Info $peacockDir
-
-if (Test-IsSourceCheckout $peacockDir) {
-    Write-ErrLine 'Questa cartella e il SORGENTE, non una release. Stop.'
-    exit 1
-}
-
+Write-Ok "v$ver"
 Unblock-PeacockTree $peacockDir
+Try-AddDefenderExclusion $peacockDir
 
 $patcher = Join-Path $peacockDir 'PeacockPatcher.exe'
 $node = Join-Path $peacockDir 'nodedist\node.exe'
@@ -67,6 +55,12 @@ if ($cfg.launchGame -and -not $game) {
 if ($cfg.applyOfflineOptions) {
     Set-OfflineFriendlyOptions $peacockDir
 }
+
+Write-Host ''
+Write-Host 'I progressi (XP, missioni, save Peacock) stanno qui:' -ForegroundColor Yellow
+Write-Host "  $peacockDir\userdata"
+Write-Host "  $peacockDir\contractSessions"
+Write-Host 'Usa SEMPRE questa stessa cartella. Non aprire ScaricaRelease.cmd a ogni partita.' -ForegroundColor Yellow
 
 Write-Step 'Porta 80'
 $owner = Get-Port80Owner
@@ -99,12 +93,12 @@ if (-not $alreadyUp) {
             break
         }
     }
-    if ($ready) { Write-Ok 'Server in ascolto.' } else { Write-WarnLine 'Timeout attesa HTTP. Proseguo comunque: il patcher puo agganciarsi dopo.' }
+    if ($ready) { Write-Ok 'Server in ascolto.' } else { Write-WarnLine 'Timeout attesa HTTP. Proseguo comunque.' }
 }
 
 Write-Step 'Avvio PeacockPatcher'
 $patcherProc = Start-Process -FilePath $patcher -WorkingDirectory $peacockDir -PassThru
-Write-Ok "Patcher PID $($patcherProc.Id)  (attende HITMAN3.exe e reindirizza a $($cfg.serverUrl))"
+Write-Ok "Patcher PID $($patcherProc.Id)  ->  $($cfg.serverUrl)"
 
 $gameProc = $null
 if ($cfg.launchGame -and $game) {
@@ -112,14 +106,12 @@ if ($cfg.launchGame -and $game) {
     Write-Info $game
     $gameProc = Start-Process -FilePath $game -WorkingDirectory (Split-Path -Parent $game) -PassThru
     Write-Ok "Gioco PID $($gameProc.Id)"
-    Write-Host ''
-    Write-Host 'Nella finestra del patcher devi vedere "Successfully patched processid ..."' -ForegroundColor Cyan
-    Write-Host 'Se non compare: tieni il patcher aperto, torna al menu del gioco, aspetta 2-3 secondi.' -ForegroundColor Cyan
+    Write-Host 'Patcher: aspetta "Successfully patched processid" e "Injected server: 127.0.0.1"' -ForegroundColor Cyan
+    Write-Host 'Missioni: parti dal Hub (Planning -> Start), NON da Carica/Continua di save IOI.' -ForegroundColor Cyan
 }
 
 Write-Host ''
-Write-Host 'Peacock e in esecuzione. Chiudi questa finestra SOLO quando hai finito di giocare.' -ForegroundColor Green
-Write-Host 'Tasto Q + Invio = chiudi patcher (e server se avviato da qui).' -ForegroundColor DarkGray
+Write-Host 'Lascia aperte queste finestre. Quando hai finito: esci dal gioco, aspetta 10 secondi, poi Q.' -ForegroundColor Green
 Write-Host ''
 
 if ($gameProc -and $cfg.stopOnGameExit) {
@@ -136,7 +128,8 @@ if ($gameProc -and $cfg.stopOnGameExit) {
     }
 }
 
-Write-Step 'Chiusura'
+Write-Step 'Salvataggio profilo (attendo 8s, Peacock scrive ogni 3s)'
+Start-Sleep -Seconds 8
 Stop-OwnedProcess $patcherProc
 if ($serverProc) { Stop-OwnedProcess $serverProc }
-Write-Ok 'Fatto.'
+Write-Ok 'Chiuso. Prossima volta: solo Gioca.cmd (tasto destro, amministratore).'

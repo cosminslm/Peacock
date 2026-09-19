@@ -26,20 +26,21 @@ Questo kit automatizza i tre punti. Il core Peacock (server TypeScript / patcher
 - Non patcha i file su disco: `PeacockPatcher.exe` (ufficiale) intercetta il processo **in RAM** e punta il config domain a localhost.
 - Non rende giocabile questa clone Git da sola. Per giocare serve la **release packaged**.
 
-## Uso (ordine obbligatorio)
+## Uso quotidiano: un solo file
 
-Copia l'intera cartella `offline-kit` sul PC Windows (es. Desktop). Poi, in ordine:
+Tasto destro su **`Gioca.cmd`** → **Esegui come amministratore**. Fine.
 
-1. Doppio clic su **`Diagnostica.cmd`** — solo lettura, ti dice cosa manca.
-2. Doppio clic su **`ScaricaRelease.cmd`** — scarica `Peacock-vX.Y.Z.zip` ufficiale in `%USERPROFILE%\Documents\Peacock` (non in Program Files, non nella cartella del gioco).
-3. Tasto destro su **`EsclusioneDefender.cmd`** → Esegui come amministratore.
-4. Se Defender aveva già quarantato il patcher: Sicurezza Windows → Protezione da virus → Cronologia → **Ripristina**.
-5. Tasto destro su **`Gioca.cmd`** → Esegui come amministratore (si auto-eleva comunque).
-   - Parte il server Node (`chunk0.js`, porta 80)
-   - Parte `PeacockPatcher.exe`
-   - Parte `HITMAN3.exe` se il percorso è in `config.json`
+Fa da solo, in quest'ordine:
 
-Nella finestra del patcher deve comparire `Successfully patched processid ...` / `Injected server: 127.0.0.1`.
+1. Se Peacock packaged **c'è già** (es. `C:\Games\HITMAN...\Peacock` 6.5.1 con i tuoi `userdata`) **non scarica nulla**.
+2. Se **manca**, scarica la release ufficiale **una tantum** e non la rioscarica alle partite successive.
+3. Prova l'esclusione Defender.
+4. Avvia server + patcher + `HITMAN3.exe`.
+5. All'uscita aspetta ~8 secondi così Peacock scrive il profilo su disco (altrimenti le missioni sembrano resettarsi).
+
+`Diagnostica.cmd` / `ScaricaRelease.cmd` / `EsclusioneDefender.cmd` restano opzionali. **Non** lanciare `ScaricaRelease` ogni volta: era quello che cancellava il flusso e rischiava un secondo Peacock vuoto.
+
+I progressi stanno in `...\Peacock\userdata` e `...\contractSessions` della **stessa** cartella che vedi all'avvio. Il launcher sceglie in automatico l'install con i profili più pieni, così non salti da 6.5.1 (XP vero) a una 8.9.1 nuova (missioni a zero).
 
 ### `config.json`
 
