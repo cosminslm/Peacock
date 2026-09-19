@@ -1,0 +1,10 @@
+Inspecting "HITMAN 3 Patch" - setup data version 7.0.0.3 (unicode)
+
+Languages:
+ - default: English
+
+No GOG.com game ID found!
+
+Setup is not passworded!
+
+Done.

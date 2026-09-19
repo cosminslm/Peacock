@@ -1,0 +1,23 @@
+curl exit: 0 size: 223236
+src dir: /tmp/dsrc/innoextract-inno-6.4-to-6.7-support
+Configuration:
+ - Build type: Release
+ - Decryption support: enabled
+ - LZMA decompression: enabled
+ - File time precision: nanoseconds
+ - Charset conversion: iconv, builtin
+
+-- Configuring done (7.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/dsrc/innoextract-inno-6.4-to-6.7-support/build
+[ 84%] Building CXX object CMakeFiles/innoextract.dir/src/stream/slice.cpp.o
+[ 86%] Building CXX object CMakeFiles/innoextract.dir/src/util/console.cpp.o
+[ 88%] Building CXX object CMakeFiles/innoextract.dir/src/util/encoding.cpp.o
+[ 90%] Building CXX object CMakeFiles/innoextract.dir/src/util/load.cpp.o
+[ 92%] Building CXX object CMakeFiles/innoextract.dir/src/util/log.cpp.o
+[ 94%] Building CXX object CMakeFiles/innoextract.dir/src/util/process.cpp.o
+[ 96%] Building CXX object CMakeFiles/innoextract.dir/src/util/time.cpp.o
+[ 98%] Building CXX object CMakeFiles/innoextract.dir/release.cpp.o
+[100%] Linking CXX executable innoextract
+[100%] Built target innoextract
+-rwxr-xr-x 1 runner runner 12854368 Sep 19 17:54 innoextract
