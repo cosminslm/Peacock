@@ -12,7 +12,7 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y cmake g++ libboost-iostreams-dev libboost-filesystem-dev \
             libboost-system-dev libboost-program-options-dev libboost-date-time-dev \
-            liblzma-dev unzip
+            liblzma-dev unzip nodejs
           exit 0
 
       - name: Build dscho innoextract (Inno 7 support)
@@ -42,94 +42,68 @@ jobs:
           [ -f innoextract ] && cp innoextract /tmp/inno && echo "BUILT OK" || { echo BUILD FAILED; tail -5 /tmp/cm.log /tmp/mk.log; }
           exit 0
 
-      - name: Extract installer fully
+      - name: Extract installer
         run: |
           set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
           rm -rf /tmp/extracted && mkdir -p /tmp/extracted
-          /tmp/inno -d /tmp/extracted "$F" > analysis/extract-log.txt 2>&1
-          echo "extract exit: $?" >> analysis/extract-log.txt
-          cd /tmp/extracted
-          find . -type f | wc -l
-          du -sh .
-          # full manifest
-          find . -type f -exec sha256sum {} \; > "$GITHUB_WORKSPACE/analysis/manifest.sha256"
-          # small text files of interest
-          mkdir -p "$GITHUB_WORKSPACE/analysis/extracted-info"
-          cp "app/HITMAN 3 Launcher.cmd" "$GITHUB_WORKSPACE/analysis/extracted-info/launcher.cmd" 2>/dev/null
-          cp app/Retail/steam_settings/configs.user.ini "$GITHUB_WORKSPACE/analysis/extracted-info/" 2>/dev/null
-          cp app/Retail/steam_settings/configs.app.ini "$GITHUB_WORKSPACE/analysis/extracted-info/" 2>/dev/null
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/launcher.cmd" 2>/dev/null
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/configs.app.ini" 2>/dev/null
+          /tmp/inno -d /tmp/extracted "$F" > /dev/null 2>&1
+          ls /tmp/extracted/app/Peacock/
+          sha256sum /tmp/extracted/app/Peacock/chunk0.js
           exit 0
 
-      - name: Verify node.exe version and authenticity
+      - name: Match chunk0.js against recent official Peacock releases
         run: |
           set +e
-          N=/tmp/extracted/app/Peacock/nodedist/node.exe
-          sha256sum "$N"
-          strings -a "$N" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | sort -u | head -10 > /tmp/nodever.txt
-          cat /tmp/nodever.txt
-          NV=$(strings -a "$N" | grep -oE "node\.js\/v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
-          echo "node string: $NV"
-          VER=$(echo "$NV" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+")
-          if [ -n "$VER" ]; then
-            curl -sL -o /tmp/official-node.zip "https://nodejs.org/dist/${VER}/node-${VER}-win-x64.zip"
-            mkdir -p /tmp/onode && cd /tmp/onode && unzip -o -q /tmp/official-node.zip
-            OFF=$(find /tmp/onode -name node.exe | head -1)
-            sha256sum "$OFF"
-            echo "=== node.exe verdict ==="
-            if [ "$(sha256sum "$N" | cut -d' ' -f1)" = "$(sha256sum "$OFF" | cut -d' ' -f1)" ]; then
-              echo "node.exe IDENTICAL to official ${VER} win-x64 build"
-            else
-              echo "node.exe DIFFERS from official ${VER} win-x64 build"
-            fi
-          fi > "$GITHUB_WORKSPACE/analysis/extracted-info/node-verify.txt" 2>&1
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/node-verify.txt"
-          exit 0
-
-      - name: Verify chunk0.js and webui against official Peacock v8.9.1
-        run: |
-          set +e
-          mkdir -p /tmp/official && cd /tmp/official
-          curl -sL -o peacock.zip "https://github.com/thepeacockproject/Peacock/releases/download/v8.9.1/Peacock-v8.9.1.zip"
-          echo "downloaded: $(stat -c%s peacock.zip 2>/dev/null)"
-          unzip -o -q peacock.zip
+          mkdir -p /tmp/rel
+          BUNDLED=$(sha256sum /tmp/extracted/app/Peacock/chunk0.js | cut -d' ' -f1)
+          BUNDLEDB=$(sha256sum /tmp/extracted/app/Peacock/webui/dist/assets/index-NtA75SgD.js | cut -d' ' -f1)
           {
-            echo "=== official v8.9.1 top-level ==="; ls -la
-            echo "=== chunk0.js hashes ==="
-            sha256sum /tmp/extracted/app/Peacock/chunk0.js 2>/dev/null
-            find . -name "chunk0.js" -exec sha256sum {} \;
-            echo "=== webui assets hashes (bundle) ==="
-            find /tmp/extracted/app/Peacock/webui -type f -exec sha256sum {} \; 2>/dev/null | sed 's|/tmp/extracted/app/Peacock/||'
-            find . -path "./webui/*" -type f -exec sha256sum {} \; 2>/dev/null
-            SAME=$(sha256sum /tmp/extracted/app/Peacock/chunk0.js 2>/dev/null | cut -d" " -f1)
-            OFFC=$(find . -name "chunk0.js" -exec sha256sum {} \; | cut -d" " -f1)
-            echo "=== verdict ==="
-            [ "$SAME" = "$OFFC" ] && echo "chunk0.js IDENTICAL to official Peacock v8.9.1" || echo "chunk0.js DIFFERS from official v8.9.1 (may be older/newer version)"
-            grep -aoE '"version":"[0-9]+\.[0-9]+\.[0-9]+"' /tmp/extracted/app/Peacock/chunk0.js | head -3
-            grep -aoE 'version.{0,20}' /tmp/extracted/app/Peacock/chunk0.js | head -5
-          } > "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-verify.txt" 2>&1
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-verify.txt"
+            echo "bundled chunk0.js  : $BUNDLED"
+            echo "bundled webui main : $BUNDLEDB"
+            echo ""
+            for TAG in $(curl -s "https://api.github.com/repos/thepeacockproject/Peacock/tags?per_page=15" | grep -oE '"name": "v[^"]+"' | cut -d'"' -f4); do
+              ASSET="Peacock-${TAG}.zip"
+              curl -sL -o rel.zip "https://github.com/thepeacockproject/Peacock/releases/download/${TAG}/${ASSET}"
+              SZ=$(stat -c%s rel.zip 2>/dev/null)
+              if [ "$SZ" -lt 1000000 ]; then echo "$TAG: download failed ($SZ bytes)"; continue; fi
+              rm -rf /tmp/relx && mkdir -p /tmp/relx && cd /tmp/relx && unzip -o -q /tmp/rel.zip
+              CH=$(find /tmp/relx -name chunk0.js -exec sha256sum {} \; | head -1 | cut -d' ' -f1)
+              WI=$(find /tmp/relx -path "*webui/dist/assets/index-*.js" -exec sha256sum {} \; | head -1 | cut -d' ' -f1)
+              MATCH=""; [ "$CH" = "$BUNDLED" ] && MATCH=" <== chunk0.js MATCH!"
+              WM=""; [ "$WI" = "$BUNDLEDB" ] && WM=" <== webui MATCH!"
+              echo "$TAG: chunk0=$CH webui=$WI$MATCH$WM"
+              cd /tmp
+            done
+          } > "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt" 2>&1
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt"
           exit 0
 
-      - name: Suspicious indicator scan
+      - name: If no exact match, diff bundled chunk0.js vs v8.9.1
         run: |
           set +e
+          grep -q "MATCH" "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt" && { echo "exact match found, skipping diff"; exit 0; }
+          curl -sL -o /tmp/p891.zip "https://github.com/thepeacockproject/Peacock/releases/download/v8.9.1/Peacock-v8.9.1.zip"
+          rm -rf /tmp/p891 && mkdir -p /tmp/p891 && cd /tmp/p891 && unzip -o -q /tmp/p891.zip
+          OFF=$(find /tmp/p891 -name chunk0.js | head -1)
+          sudo apt-get install -y nodejs >/dev/null 2>&1
+          npx --yes js-beautify /tmp/extracted/app/Peacock/chunk0.js > /tmp/bundled.pretty.js 2>/dev/null
+          npx --yes js-beautify "$OFF" > /tmp/official.pretty.js 2>/dev/null
+          wc -l /tmp/bundled.pretty.js /tmp/official.pretty.js
           {
-            echo "=== URLs in extracted TEXT/SCRIPT files ==="
-            grep -rIhoE "https?://[a-zA-Z0-9./?=_%:-]{5,120}" /tmp/extracted --include="*.cmd" --include="*.ini" --include="*.js" 2>/dev/null | grep -v "chunk0.js" | sort -u | head -40
-            echo "=== URLs in chunk0.js (external endpoints) ==="
-            grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,120}" /tmp/extracted/app/Peacock/chunk0.js | sort -u | head -30
-            echo "=== powershell/cmd/schtasks/reg indicators in scripts ==="
-            grep -rInE "powershell|schtasks|reg add|Invoke-WebRequest|DownloadString|curl |wget " /tmp/extracted --include="*.cmd" --include="*.ini" --include="*.js" 2>/dev/null | grep -v chunk0.js | head -20
-            echo "=== URLs inside Goldberg.dll / Launcher.exe ==="
-            strings -a /tmp/extracted/app/Retail/Goldberg.dll | grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,100}" | sort -u | head -20
-            strings -a /tmp/extracted/app/Retail/Launcher.exe | grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,100}" | sort -u | head -20
-            echo "=== Launcher.exe strings sample ==="
-            strings -a /tmp/extracted/app/Retail/Launcher.exe | grep -aiE "hitman|peacock|steam_api|goldberg|cmd|exe" | sort -u | head -30
-          } > "$GITHUB_WORKSPACE/analysis/extracted-info/suspicious-scan.txt" 2>&1
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/suspicious-scan.txt"
+            echo "=== version strings bundled ==="
+            grep -oE '"version": ?"[0-9.]+"|"PEACOCK_VERSION[^,]{0,40}|version: ?"[0-9.]+"' /tmp/bundled.pretty.js | head -5
+            grep -m2 -oE 'v8\.[0-9]+\.[0-9]+|8\.[0-9]+\.[0-9]+' /tmp/bundled.pretty.js | head -5
+            echo "=== version strings official v8.9.1 ==="
+            grep -oE '"version": ?"[0-9.]+"|PEACOCK_VERSION[^,]{0,40}' /tmp/official.pretty.js | head -5
+            echo "=== diffstat (beautified) ==="
+            diff /tmp/bundled.pretty.js /tmp/official.pretty.js > /tmp/chunk.diff
+            echo "lines added: $(grep -c '^>' /tmp/chunk.diff), removed: $(grep -c '^<' /tmp/chunk.diff)"
+            echo "=== first 100 lines of diff ==="
+            head -100 /tmp/chunk.diff
+          } > "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-diff.txt" 2>&1
+          cp /tmp/chunk.diff "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-full-diff.txt" 2>/dev/null
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-diff.txt"
           exit 0
 
       - name: Commit analysis back
@@ -138,7 +112,7 @@ jobs:
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A analysis/
-          git commit -m "chore: full extraction, manifests and verification vs official Peacock v8.9.1 [skip ci]"
+          git commit -m "chore: match chunk0.js against official Peacock releases [skip ci]"
           git pull --rebase origin arena/01a0babf-peacock || true
           git push origin arena/01a0babf-peacock || true
           exit 0
