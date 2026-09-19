@@ -23,7 +23,10 @@ jobs:
         run: |
           set +e
           sudo apt-get update -qq
-          sudo apt-get install -y p7zip-full
+          sudo apt-get install -y p7zip-full cmake g++ \
+            libboost-iostreams-dev libboost-filesystem-dev libboost-system-dev \
+            libboost-program-options-dev libboost-date-time-dev
+          exit 0
 
       - name: 7-Zip listing
         run: |
