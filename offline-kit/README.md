@@ -101,6 +101,7 @@ Se manca uno di questi, è il source. `Diagnostica.cmd` lo dice.
 | File | Ruolo |
 | --- | --- |
 | `Gioca.cmd` | Avvio one-click (admin, server, patcher, gioco) |
+| `ProfiloLocale.cmd` | Mostra il JSON del profilo e scrive `options.ini` offline |
 | `Diagnostica.cmd` | Assessment read-only |
 | `ScaricaRelease.cmd` | Download + unzip release ufficiale |
 | `EsclusioneDefender.cmd` | Falso positivo patcher |

@@ -579,7 +579,14 @@ function Set-OfflineFriendlyOptions {
     param([string]$PeacockDir)
     $ini = Join-Path $PeacockDir 'options.ini'
     if (-not (Test-Path -LiteralPath $ini)) {
-        Write-WarnLine "options.ini non esiste ancora (verra creato al primo avvio del server)."
+        @(
+            '[peacock]'
+            'updateChecking=false'
+            'leaderboards=false'
+            'imageLoading=OFFLINE'
+            'jokes=false'
+        ) | Set-Content -LiteralPath $ini -Encoding UTF8
+        Write-Ok "Creato $ini (niente update, niente leaderboard, immagini OFFLINE)."
         return
     }
     $text = Get-Content -LiteralPath $ini -Raw
