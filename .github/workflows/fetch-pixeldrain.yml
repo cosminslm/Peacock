@@ -12,60 +12,74 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
         with:
           ref: arena/01a0babf-peacock
 
+      - name: Install tools
+        run: |
+          set +e
+          sudo apt-get update -qq
+          sudo apt-get install -y p7zip-full
+
       - name: 7-Zip listing
         run: |
-          sudo apt-get update -qq || true
-          sudo apt-get install -y p7zip-full
+          set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
           mkdir -p analysis
-          7z l "$F" > analysis/7z-listing.txt 2>&1 || true
-          7z l -slt "$F" > analysis/7z-listing-slt.txt 2>&1 || true
-          tail -60 analysis/7z-listing.txt
+          7z l "$F" > analysis/7z-listing.txt 2>&1
+          7z l -slt "$F" > analysis/7z-listing-slt.txt 2>&1
+          echo "=== 7z ==="; tail -40 analysis/7z-listing.txt
 
-      - name: Build innoextract from PR branch (Inno 6.4-6.6 support)
+      - name: Build innoextract variants
         run: |
+          set +e
           cd /tmp
-          for PR in 214 212 208; do
-            echo "=== trying PR $PR ==="
-            curl -sL --fail -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/refs/pull/$PR/head" || continue
-            tar xzf src.tar.gz
-            D=$(ls -d innoextract-*/ | head -1)
-            cd "$D"
-            mkdir -p build && cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cmake-$PR.log 2>&1 && make -j4 > /tmp/make-$PR.log 2>&1
-            if [ -f innoextract ]; then
-              echo "PR $PR built OK"
-              cp innoextract /tmp/innoextract-$PR
+          for REF in "pr214:refs/pull/214/head" "pr212:refs/pull/212/head" "pr208:refs/pull/208/head" "master:master"; do
+            NAME="${REF%%:*}"; REFSPEC="${REF#*:}"
+            echo "=== building $NAME ($REFSPEC) ==="
+            curl -sL -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/$REFSPEC"
+            [ -s src.tar.gz ] || { echo "download failed for $NAME"; continue; }
+            rm -rf /tmp/isrc && mkdir -p /tmp/isrc
+            tar xzf src.tar.gz -C /tmp/isrc 2>/dev/null
+            D=$(find /tmp/isrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
+            [ -n "$D" ] || { echo "no source dir for $NAME"; continue; }
+            mkdir -p "$D/build"
+            ( cd "$D/build" && cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cmake-$NAME.log 2>&1 && make -j4 > /tmp/make-$NAME.log 2>&1 )
+            if [ -f "$D/build/innoextract" ]; then
+              cp "$D/build/innoextract" /tmp/innoextract-$NAME
+              echo "$NAME built OK"
             else
-              echo "PR $PR build FAILED (see logs)"; tail -5 /tmp/cmake-$PR.log /tmp/make-$PR.log
+              echo "$NAME build FAILED"; tail -3 /tmp/cmake-$NAME.log 2>/dev/null; tail -3 /tmp/make-$NAME.log 2>/dev/null
             fi
-            cd /tmp && rm -rf innoextract-*
           done
 
-      - name: Try extracting with new innoextract
+      - name: Try new innoextract on the file
         run: |
+          set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          for PR in 214 212 208; do
-            if [ -f /tmp/innoextract-$PR ]; then
-              echo "=== PR $PR ==="
-              /tmp/innoextract-$PR -i "$F" > analysis/inno-info-pr$PR.txt 2>&1 || true
-              /tmp/innoextract-$PR -l "$F" > analysis/inno-list-pr$PR.txt 2>&1 || true
-              head -40 analysis/inno-info-pr$PR.txt
-              head -60 analysis/inno-list-pr$PR.txt
-            fi
+          for BIN in /tmp/innoextract-*; do
+            N=$(basename "$BIN")
+            echo "=== $N ==="
+            "$BIN" -i "$F" > "analysis/inno-info-$N.txt" 2>&1
+            "$BIN" -l "$F" > "analysis/inno-list-$N.txt" 2>&1
+            head -30 "analysis/inno-info-$N.txt"
+            echo "--- list (first 50 lines) ---"
+            head -50 "analysis/inno-list-$N.txt"
           done
+          # if any extraction tool can list, also try full extraction to a scratch dir for inspection
+          BEST=$(for B in /tmp/innoextract-*; do "$B" -l "$F" 2>/dev/null | grep -c "\->" ; done 2>/dev/null | sort -rn | head -1)
+          echo "best list line count: $BEST"
 
       - name: Commit analysis back
         run: |
+          set +e
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add analysis/
-          git commit -m "chore: deep analysis of HITMAN 3 patch installer [skip ci]" || echo "nothing to commit"
+          git commit -m "chore: deep analysis of HITMAN 3 patch installer [skip ci]"
           git push origin arena/01a0babf-peacock
+          echo done
