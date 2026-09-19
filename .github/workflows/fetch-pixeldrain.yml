@@ -22,47 +22,114 @@ jobs:
       - name: Install tools
         run: |
           set +e
-          mkdir -p analysis/buildlogs
-          sudo apt-get update > analysis/buildlogs/apt2.log 2>&1
+          sudo apt-get update -qq
           sudo apt-get install -y cmake g++ libboost-iostreams-dev libboost-filesystem-dev \
             libboost-system-dev libboost-program-options-dev libboost-date-time-dev \
-            liblzma-dev >> analysis/buildlogs/apt2.log 2>&1
+            liblzma-dev unzip
           exit 0
 
-      - name: Build dscho PR (Inno 6.4-7.0.2 support)
+      - name: Build dscho innoextract (Inno 7 support)
         run: |
           set +e
           cd /tmp
-          LOG="$GITHUB_WORKSPACE/analysis/buildlogs/build-dscho.log"
-          {
-            curl -sL -o dscho.tar.gz "https://codeload.github.com/dscho/innoextract/tar.gz/refs/heads/inno-6.4-to-6.7-support"
-            echo "curl exit: $? size: $(stat -c%s dscho.tar.gz 2>/dev/null)"
-            rm -rf /tmp/dsrc && mkdir -p /tmp/dsrc
-            tar xzf dscho.tar.gz -C /tmp/dsrc
-            D=$(find /tmp/dsrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
-            echo "src dir: $D"
-            mkdir -p "$D/build" && cd "$D/build"
-            cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -10
-            make -j4 2>&1 | tail -10
-            ls -la innoextract
-          } > "$LOG" 2>&1
-          [ -f "$D/build/innoextract" ] && cp "$D/build/innoextract" /tmp/innoextract-dscho
-          ls -la /tmp/innoextract-dscho 2>/dev/null || echo "BUILD FAILED"
+          curl -sL -o dscho.tar.gz "https://codeload.github.com/dscho/innoextract/tar.gz/refs/heads/inno-6.4-to-6.7-support"
+          rm -rf /tmp/dsrc && mkdir -p /tmp/dsrc
+          tar xzf dscho.tar.gz -C /tmp/dsrc
+          D=$(find /tmp/dsrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
+          mkdir -p "$D/build" && cd "$D/build"
+          cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cm.log 2>&1
+          make -j4 > /tmp/mk.log 2>&1
+          [ -f innoextract ] && cp innoextract /tmp/inno && echo "BUILT OK" || { echo BUILD FAILED; tail -5 /tmp/cm.log /tmp/mk.log; }
           exit 0
 
-      - name: List and extract with dscho build
+      - name: Extract installer fully
         run: |
           set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          B=/tmp/innoextract-dscho
-          [ -x "$B" ] || exit 0
-          "$B" -i "$F" > analysis/inno-info-dscho.txt 2>&1
-          "$B" -l "$F" > analysis/inno-list-dscho.txt 2>&1
-          "$B" -d /tmp/extracted "$F" > analysis/inno-extract-dscho.log 2>&1
-          echo "=== INFO ==="; cat analysis/inno-info-dscho.txt
-          echo "=== LIST (first 80) ==="; head -80 analysis/inno-list-dscho.txt
-          echo "=== extracted tree ==="; find /tmp/extracted -type f 2>/dev/null | head -100
-          du -sh /tmp/extracted 2>/dev/null
+          rm -rf /tmp/extracted && mkdir -p /tmp/extracted
+          /tmp/inno -d /tmp/extracted "$F" > analysis/extract-log.txt 2>&1
+          echo "extract exit: $?" >> analysis/extract-log.txt
+          cd /tmp/extracted
+          find . -type f | wc -l
+          du -sh .
+          # full manifest
+          find . -type f -exec sha256sum {} \; > "$GITHUB_WORKSPACE/analysis/manifest.sha256"
+          # small text files of interest
+          mkdir -p "$GITHUB_WORKSPACE/analysis/extracted-info"
+          cp "app/HITMAN 3 Launcher.cmd" "$GITHUB_WORKSPACE/analysis/extracted-info/launcher.cmd" 2>/dev/null
+          cp app/Retail/steam_settings/configs.user.ini "$GITHUB_WORKSPACE/analysis/extracted-info/" 2>/dev/null
+          cp app/Retail/steam_settings/configs.app.ini "$GITHUB_WORKSPACE/analysis/extracted-info/" 2>/dev/null
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/launcher.cmd" 2>/dev/null
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/configs.app.ini" 2>/dev/null
+          exit 0
+
+      - name: Verify node.exe version and authenticity
+        run: |
+          set +e
+          N=/tmp/extracted/app/Peacock/nodedist/node.exe
+          sha256sum "$N"
+          strings -a "$N" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | sort -u | head -10 > /tmp/nodever.txt
+          cat /tmp/nodever.txt
+          NV=$(strings -a "$N" | grep -oE "node\.js\/v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+          echo "node string: $NV"
+          VER=$(echo "$NV" | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+")
+          if [ -n "$VER" ]; then
+            curl -sL -o /tmp/official-node.zip "https://nodejs.org/dist/${VER}/node-${VER}-win-x64.zip"
+            mkdir -p /tmp/onode && cd /tmp/onode && unzip -o -q /tmp/official-node.zip
+            OFF=$(find /tmp/onode -name node.exe | head -1)
+            sha256sum "$OFF"
+            echo "=== node.exe verdict ==="
+            if [ "$(sha256sum "$N" | cut -d' ' -f1)" = "$(sha256sum "$OFF" | cut -d' ' -f1)" ]; then
+              echo "node.exe IDENTICAL to official ${VER} win-x64 build"
+            else
+              echo "node.exe DIFFERS from official ${VER} win-x64 build"
+            fi
+          fi > "$GITHUB_WORKSPACE/analysis/extracted-info/node-verify.txt" 2>&1
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/node-verify.txt"
+          exit 0
+
+      - name: Verify chunk0.js and webui against official Peacock v8.9.1
+        run: |
+          set +e
+          mkdir -p /tmp/official && cd /tmp/official
+          curl -sL -o peacock.zip "https://github.com/thepeacockproject/Peacock/releases/download/v8.9.1/Peacock-v8.9.1.zip"
+          echo "downloaded: $(stat -c%s peacock.zip 2>/dev/null)"
+          unzip -o -q peacock.zip
+          {
+            echo "=== official v8.9.1 top-level ==="; ls -la
+            echo "=== chunk0.js hashes ==="
+            sha256sum /tmp/extracted/app/Peacock/chunk0.js 2>/dev/null
+            find . -name "chunk0.js" -exec sha256sum {} \;
+            echo "=== webui assets hashes (bundle) ==="
+            find /tmp/extracted/app/Peacock/webui -type f -exec sha256sum {} \; 2>/dev/null | sed 's|/tmp/extracted/app/Peacock/||'
+            find . -path "./webui/*" -type f -exec sha256sum {} \; 2>/dev/null
+            SAME=$(sha256sum /tmp/extracted/app/Peacock/chunk0.js 2>/dev/null | cut -d" " -f1)
+            OFFC=$(find . -name "chunk0.js" -exec sha256sum {} \; | cut -d" " -f1)
+            echo "=== verdict ==="
+            [ "$SAME" = "$OFFC" ] && echo "chunk0.js IDENTICAL to official Peacock v8.9.1" || echo "chunk0.js DIFFERS from official v8.9.1 (may be older/newer version)"
+            grep -aoE '"version":"[0-9]+\.[0-9]+\.[0-9]+"' /tmp/extracted/app/Peacock/chunk0.js | head -3
+            grep -aoE 'version.{0,20}' /tmp/extracted/app/Peacock/chunk0.js | head -5
+          } > "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-verify.txt" 2>&1
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-verify.txt"
+          exit 0
+
+      - name: Suspicious indicator scan
+        run: |
+          set +e
+          {
+            echo "=== URLs in extracted TEXT/SCRIPT files ==="
+            grep -rIhoE "https?://[a-zA-Z0-9./?=_%:-]{5,120}" /tmp/extracted --include="*.cmd" --include="*.ini" --include="*.js" 2>/dev/null | grep -v "chunk0.js" | sort -u | head -40
+            echo "=== URLs in chunk0.js (external endpoints) ==="
+            grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,120}" /tmp/extracted/app/Peacock/chunk0.js | sort -u | head -30
+            echo "=== powershell/cmd/schtasks/reg indicators in scripts ==="
+            grep -rInE "powershell|schtasks|reg add|Invoke-WebRequest|DownloadString|curl |wget " /tmp/extracted --include="*.cmd" --include="*.ini" --include="*.js" 2>/dev/null | grep -v chunk0.js | head -20
+            echo "=== URLs inside Goldberg.dll / Launcher.exe ==="
+            strings -a /tmp/extracted/app/Retail/Goldberg.dll | grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,100}" | sort -u | head -20
+            strings -a /tmp/extracted/app/Retail/Launcher.exe | grep -aoE "https?://[a-zA-Z0-9./?=_%:-]{5,100}" | sort -u | head -20
+            echo "=== Launcher.exe strings sample ==="
+            strings -a /tmp/extracted/app/Retail/Launcher.exe | grep -aiE "hitman|peacock|steam_api|goldberg|cmd|exe" | sort -u | head -30
+          } > "$GITHUB_WORKSPACE/analysis/extracted-info/suspicious-scan.txt" 2>&1
+          cat "$GITHUB_WORKSPACE/analysis/extracted-info/suspicious-scan.txt"
           exit 0
 
       - name: Commit analysis back
@@ -71,7 +138,7 @@ jobs:
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A analysis/
-          git commit -m "chore: dscho innoextract analysis (Inno 7 support) [skip ci]"
+          git commit -m "chore: full extraction, manifests and verification vs official Peacock v8.9.1 [skip ci]"
           git pull --rebase origin arena/01a0babf-peacock || true
           git push origin arena/01a0babf-peacock || true
           exit 0
