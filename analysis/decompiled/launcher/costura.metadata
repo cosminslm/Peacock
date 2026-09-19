@@ -1,0 +1,12 @@
+costura.costura.dll.compressed|6.0.0.0|Costura, Version=6.0.0.0, Culture=neutral, PublicKeyToken=9919ef960d84173d|Costura.dll|028E9832F421F11F9497C610F1734E0F3D868037|5120
+costura.costura.pdb.compressed|||Costura.pdb|806F4C19B2D7FD9E3B836269EC07647019A29E95|7960
+costura.microsoft.bcl.asyncinterfaces.dll.compressed|9.0.0.7|Microsoft.Bcl.AsyncInterfaces, Version=9.0.0.7, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|Microsoft.Bcl.AsyncInterfaces.dll|74C61E7EA7CFC7B18393D3731CF8583DFD810260|26376
+costura.peacockpatcher.core.dll.compressed|1.0.0.0|PeacockPatcher.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null|PeacockPatcher.Core.dll|EDC12C51E7F0A5A82BF5111C474972390909DF2E|48640
+costura.peacockpatcher.core.pdb.compressed|||PeacockPatcher.Core.pdb|0CFA5AA6E214FF4FD5E36A7FE21AB8EE5B76D487|12732
+costura.system.buffers.dll.compressed|4.0.5.0|System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|System.Buffers.dll|D87680E1A96549CF45506D17566EC08C27A770D8|23816
+costura.system.diagnostics.diagnosticsource.dll.compressed|9.0.0.7|System.Diagnostics.DiagnosticSource, Version=9.0.0.7, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|System.Diagnostics.DiagnosticSource.dll|E44765C4EEBBD728C6AB262B8C661BDD8F1E9BC0|199968
+costura.system.memory.dll.compressed|4.0.5.0|System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|System.Memory.dll|96C87B7148805A0ADCD4B9E23162DEB06D7A4702|145200
+costura.system.numerics.vectors.dll.compressed|4.1.6.0|System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a|System.Numerics.Vectors.dll|C5583C3257CF193FF4736671445F8DA64366A6A1|110344
+costura.system.runtime.compilerservices.unsafe.dll.compressed|6.0.3.0|System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a|System.Runtime.CompilerServices.Unsafe.dll|43290CD4AAF80DF5D1CF9F242486EF8E646FDDDA|19256
+costura.system.threading.channels.dll.compressed|9.0.0.7|System.Threading.Channels, Version=9.0.0.7, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|System.Threading.Channels.dll|19FB8A8BC96D3AAEEB855A10666FF8B64487464C|78600
+costura.system.threading.tasks.extensions.dll.compressed|4.2.4.0|System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51|System.Threading.Tasks.Extensions.dll|3439DA9B7918FA0C17836ACBE1FA4E05C40119EC|27960

@@ -1,0 +1,19 @@
+using System;
+
+namespace HitmanPatcher;
+
+[Flags]
+public enum MemProtection : uint
+{
+	PAGE_EXECUTE = 0x10u,
+	PAGE_EXECUTE_READ = 0x20u,
+	PAGE_EXECUTE_READWRITE = 0x40u,
+	PAGE_EXECUTE_WRITECOPY = 0x80u,
+	PAGE_NOACCESS = 1u,
+	PAGE_READONLY = 2u,
+	PAGE_READWRITE = 4u,
+	PAGE_WRITECOPY = 8u,
+	PAGE_GUARD = 0x100u,
+	PAGE_NOCACHE = 0x200u,
+	PAGE_WRITECOMBINE = 0x400u
+}
