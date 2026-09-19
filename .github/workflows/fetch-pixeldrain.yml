@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update > analysis/buildlogs/apt.log 2>&1
           sudo apt-get install -y p7zip-full cmake g++ \
             libboost-iostreams-dev libboost-filesystem-dev libboost-system-dev \
-            libboost-program-options-dev libboost-date-time-dev >> analysis/buildlogs/apt.log 2>&1
+            libboost-program-options-dev libboost-date-time-dev liblzma-dev >> analysis/buildlogs/apt.log 2>&1
           echo "apt exit: $?" >> analysis/buildlogs/apt.log
           which cmake g++ 7z >> analysis/buildlogs/apt.log 2>&1
           exit 0
