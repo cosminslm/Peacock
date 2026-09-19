@@ -1,0 +1,38 @@
++ echo '=== sha256 ==='
+=== sha256 ===
++ sha256sum fetched/HITMAN_3_Patch_3.280.0_V2.exe
+402c2049cdf7fcb17e245de33ebc80e87734842882977667a74442835fffa7ac  fetched/HITMAN_3_Patch_3.280.0_V2.exe
++ echo '=== md5 ==='
+=== md5 ===
++ md5sum fetched/HITMAN_3_Patch_3.280.0_V2.exe
+ae64b7bcd412e264d17c79a26a6ea938  fetched/HITMAN_3_Patch_3.280.0_V2.exe
++ echo '=== innoextract info ==='
+=== innoextract info ===
++ innoextract -i fetched/HITMAN_3_Patch_3.280.0_V2.exe
+Warning: Unexpected setup loader revision: 2
+Warning: Setup loader checksum mismatch!
+Could not determine setup data version!
+If you are sure the setup file is not corrupted, consider 
+filing a bug report at https://innoextract.constexpr.org/issues
+Done with 1 error and 2 warnings.
++ true
++ echo '=== innoextract file list ==='
+=== innoextract file list ===
++ innoextract -l fetched/HITMAN_3_Patch_3.280.0_V2.exe
+Warning: Unexpected setup loader revision: 2
+Warning: Setup loader checksum mismatch!
+Could not determine setup data version!
+If you are sure the setup file is not corrupted, consider 
+filing a bug report at https://innoextract.constexpr.org/issues
+Done with 1 error and 2 warnings.
++ true
++ echo '=== innoextract languages ==='
+=== innoextract languages ===
++ innoextract -m fetched/HITMAN_3_Patch_3.280.0_V2.exe
+Warning: Unexpected setup loader revision: 2
+Warning: Setup loader checksum mismatch!
+Could not determine setup data version!
+If you are sure the setup file is not corrupted, consider 
+filing a bug report at https://innoextract.constexpr.org/issues
+Done with 1 error and 2 warnings.
++ true
