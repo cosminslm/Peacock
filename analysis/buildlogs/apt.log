@@ -1,12 +1,12 @@
 Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
-Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
 Hit:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease
+Get:6 https://packages.microsoft.com/ubuntu/24.04/prod noble InRelease [3600 B]
 Get:3 http://azure.archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
 Get:4 http://azure.archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
 Get:5 http://azure.archive.ubuntu.com/ubuntu noble-security InRelease [126 kB]
-Get:7 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [478 kB]
+Get:7 https://dl.google.com/linux/chrome-stable/deb stable InRelease [2548 B]
 Get:8 https://packages.microsoft.com/ubuntu/24.04/prod noble/main arm64 Packages [429 kB]
-Get:9 https://dl.google.com/linux/chrome-stable/deb stable InRelease [2548 B]
+Get:9 https://packages.microsoft.com/ubuntu/24.04/prod noble/main amd64 Packages [478 kB]
 Get:10 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1275 kB]
 Get:11 http://azure.archive.ubuntu.com/ubuntu noble-updates/main Translation-en [294 kB]
 Get:12 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 Components [180 kB]
@@ -33,7 +33,7 @@ Get:32 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted amd64 Pa
 Get:33 http://azure.archive.ubuntu.com/ubuntu noble-security/restricted Translation-en [336 kB]
 Get:34 http://azure.archive.ubuntu.com/ubuntu noble-security/multiverse Translation-en [11.3 kB]
 Get:35 https://dl.google.com/linux/chrome-stable/deb stable/main amd64 Packages [1408 B]
-Fetched 12.2 MB in 1s (8918 kB/s)
+Fetched 12.2 MB in 1s (9078 kB/s)
 Reading package lists...
 Reading package lists...
 Building dependency tree...
@@ -61,6 +61,7 @@ Suggested packages:
   libboost-stacktrace1.83-dev libboost-test1.83-dev libboost-thread1.83-dev
   libboost-timer1.83-dev libboost-type-erasure1.83-dev libboost-url1.83-dev
   libboost-wave1.83-dev libboost1.83-tools-dev libmpfrc++-dev libntl-dev
+  liblzma-doc
 The following NEW packages will be installed:
   cmake cmake-data libboost-atomic1.83-dev libboost-atomic1.83.0
   libboost-date-time-dev libboost-date-time1.83-dev libboost-date-time1.83.0
@@ -70,10 +71,10 @@ The following NEW packages will be installed:
   libboost-program-options1.83-dev libboost-program-options1.83.0
   libboost-regex1.83-dev libboost-regex1.83.0 libboost-serialization1.83-dev
   libboost-serialization1.83.0 libboost-system-dev libboost-system1.83-dev
-  libboost-system1.83.0 libboost1.83-dev libjsoncpp25 librhash0
-0 upgraded, 26 newly installed, 0 to remove and 73 not upgraded.
-Need to get 29.0 MB of archives.
-After this operation, 251 MB of additional disk space will be used.
+  libboost-system1.83.0 libboost1.83-dev libjsoncpp25 liblzma-dev librhash0
+0 upgraded, 27 newly installed, 0 to remove and 73 not upgraded.
+Need to get 29.2 MB of archives.
+After this operation, 252 MB of additional disk space will be used.
 Get:1 file:/etc/apt/apt-mirrors.txt Mirrorlist [144 B]
 Get:2 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libjsoncpp25 amd64 1.9.5-6build1 [82.8 kB]
 Get:3 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 librhash0 amd64 1.4.3-3build1 [129 kB]
@@ -101,7 +102,8 @@ Get:24 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libboost-
 Get:25 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 libboost-program-options1.83-dev amd64 1.83.0-2.1ubuntu3.2 [388 kB]
 Get:26 http://azure.archive.ubuntu.com/ubuntu noble/main amd64 libboost-program-options-dev amd64 1.83.0.1ubuntu2 [4086 B]
 Get:27 http://azure.archive.ubuntu.com/ubuntu noble/universe amd64 libboost-system-dev amd64 1.83.0.1ubuntu2 [4206 B]
-Fetched 29.0 MB in 3s (11.1 MB/s)
+Get:28 http://azure.archive.ubuntu.com/ubuntu noble-updates/main amd64 liblzma-dev amd64 5.6.1+really5.4.5-1ubuntu0.3 [176 kB]
+Fetched 29.2 MB in 4s (8118 kB/s)
 Selecting previously unselected package libjsoncpp25:amd64.
 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 201818 files and directories currently installed.)
 Preparing to unpack .../00-libjsoncpp25_1.9.5-6build1_amd64.deb ...
@@ -181,6 +183,9 @@ Unpacking libboost-program-options-dev:amd64 (1.83.0.1ubuntu2) ...
 Selecting previously unselected package libboost-system-dev:amd64.
 Preparing to unpack .../25-libboost-system-dev_1.83.0.1ubuntu2_amd64.deb ...
 Unpacking libboost-system-dev:amd64 (1.83.0.1ubuntu2) ...
+Selecting previously unselected package liblzma-dev:amd64.
+Preparing to unpack .../26-liblzma-dev_5.6.1+really5.4.5-1ubuntu0.3_amd64.deb ...
+Unpacking liblzma-dev:amd64 (5.6.1+really5.4.5-1ubuntu0.3) ...
 Setting up libboost-program-options1.83.0:amd64 (1.83.0-2.1ubuntu3.2) ...
 Setting up libboost1.83-dev:amd64 (1.83.0-2.1ubuntu3.2) ...
 Setting up libboost-date-time1.83.0:amd64 (1.83.0-2.1ubuntu3.2) ...
@@ -195,6 +200,7 @@ Setting up libboost-iostreams1.83.0:amd64 (1.83.0-2.1ubuntu3.2) ...
 Setting up libboost-regex1.83-dev:amd64 (1.83.0-2.1ubuntu3.2) ...
 Setting up libjsoncpp25:amd64 (1.9.5-6build1) ...
 Setting up libboost-atomic1.83-dev:amd64 (1.83.0-2.1ubuntu3.2) ...
+Setting up liblzma-dev:amd64 (5.6.1+really5.4.5-1ubuntu0.3) ...
 Setting up librhash0:amd64 (1.4.3-3build1) ...
 Setting up cmake-data (3.28.3-1build7) ...
 Setting up libboost-system1.83-dev:amd64 (1.83.0-2.1ubuntu3.2) ...

@@ -2,32 +2,56 @@
 curl exit: 0 size: 219054
 tar exit: 0
 src dir: /tmp/isrc/innoextract-refs-pull-214-head
--- Checking compiler flag: -Wundef
--- Checking compiler flag: -Wunused-const-variable=1
--- Checking compiler flag: -Wunused-macros
--- Checking compiler flag: -Wvla
--- Checking compiler flag: -Wold-style-cast
--- Checking compiler flag: -Wshadow
--- Checking linker flag: -Wl,--no-undefined
--- Checking compiler flag: -Wmaybe-uninitialized
--- Checking compiler flag: -Wno-maybe-uninitialized
--- Checking linker flag: -Wl,--as-needed
--- Checking compiler flag: -g2
--- Checking compiler flag: -ffast-math
--- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
--- Found Python: /usr/bin/python3.12 (found version "3.12.3") found components: Interpreter
--- Checking for module 'liblzma'
---   Package 'liblzma', required by 'virtual:world', not found
-CMake Error at /usr/local/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake:233 (message):
-  Could NOT find LZMA (missing: LZMA_LIBRARY LZMA_INCLUDE_DIR)
-Call Stack (most recent call first):
-  /usr/local/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake:603 (_FPHSA_FAILURE_MESSAGE)
-  cmake/FindLZMA.cmake:87 (find_package_handle_standard_args)
-  CMakeLists.txt:165 (find_package)
+-- Looking for gmtime_r - found
+-- Looking for AT_FDCWD
+-- Looking for AT_FDCWD - found
+-- Looking for utimensat
+-- Looking for utimensat - found
+-- Looking for posix_spawnp
+-- Looking for posix_spawnp - found
+-- Looking for environ
+-- Looking for environ - found
+-- Looking for waitpid
+-- Looking for waitpid - found
+-- Checking compiler builtin: __builtin_bswap16
+-- Checking compiler builtin: __builtin_bswap32
+-- Checking compiler builtin: __builtin_bswap64
 
+Configuration:
+ - Build type: Release
+ - Decryption support: enabled
+ - LZMA decompression: enabled
+ - File time precision: nanoseconds
+ - Charset conversion: iconv, builtin
 
--- Configuring incomplete, errors occurred!
-cmake exit: 1
-make: *** No targets specified and no makefile found.  Stop.
-make exit: 2
-binary missing
+-- Configuring done (5.2s)
+-- Generating done (0.0s)
+-- Build files have been written to: /tmp/isrc/innoextract-refs-pull-214-head/build
+cmake exit: 0
+[ 54%] Building CXX object CMakeFiles/innoextract.dir/src/setup/ini.cpp.o
+[ 56%] Building CXX object CMakeFiles/innoextract.dir/src/setup/item.cpp.o
+[ 58%] Building CXX object CMakeFiles/innoextract.dir/src/setup/language.cpp.o
+[ 60%] Building CXX object CMakeFiles/innoextract.dir/src/setup/message.cpp.o
+[ 62%] Building CXX object CMakeFiles/innoextract.dir/src/setup/permission.cpp.o
+[ 64%] Building CXX object CMakeFiles/innoextract.dir/src/setup/registry.cpp.o
+[ 66%] Building CXX object CMakeFiles/innoextract.dir/src/setup/run.cpp.o
+[ 68%] Building CXX object CMakeFiles/innoextract.dir/src/setup/task.cpp.o
+[ 70%] Building CXX object CMakeFiles/innoextract.dir/src/setup/type.cpp.o
+[ 72%] Building CXX object CMakeFiles/innoextract.dir/src/setup/version.cpp.o
+[ 74%] Building CXX object CMakeFiles/innoextract.dir/src/setup/windows.cpp.o
+[ 76%] Building CXX object CMakeFiles/innoextract.dir/src/stream/block.cpp.o
+[ 78%] Building CXX object CMakeFiles/innoextract.dir/src/stream/chunk.cpp.o
+[ 80%] Building CXX object CMakeFiles/innoextract.dir/src/stream/file.cpp.o
+[ 82%] Building CXX object CMakeFiles/innoextract.dir/src/stream/lzma.cpp.o
+[ 84%] Building CXX object CMakeFiles/innoextract.dir/src/stream/slice.cpp.o
+[ 86%] Building CXX object CMakeFiles/innoextract.dir/src/util/console.cpp.o
+[ 88%] Building CXX object CMakeFiles/innoextract.dir/src/util/encoding.cpp.o
+[ 90%] Building CXX object CMakeFiles/innoextract.dir/src/util/load.cpp.o
+[ 92%] Building CXX object CMakeFiles/innoextract.dir/src/util/log.cpp.o
+[ 94%] Building CXX object CMakeFiles/innoextract.dir/src/util/process.cpp.o
+[ 96%] Building CXX object CMakeFiles/innoextract.dir/src/util/time.cpp.o
+[ 98%] Building CXX object CMakeFiles/innoextract.dir/release.cpp.o
+[100%] Linking CXX executable innoextract
+[100%] Built target innoextract
+make exit: 0
+-rwxr-xr-x 1 runner runner 12600432 Sep 19 17:52 innoextract
