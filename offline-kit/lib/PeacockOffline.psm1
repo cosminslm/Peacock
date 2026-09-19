@@ -397,13 +397,78 @@ function Try-AddDefenderExclusion {
     }
 }
 
+function Get-HitmanPlatform {
+    param([string]$Exe)
+    $result = [pscustomobject]@{
+        Kind        = 'sconosciuta'
+        Supported   = $true
+        NeedProcess = $null
+        Hint        = 'Piattaforma non riconosciuta dai file accanto a HITMAN3.exe.'
+        Exe         = $Exe
+    }
+    if (-not $Exe -or -not (Test-Path -LiteralPath $Exe)) { return $result }
+
+    $dir = Split-Path -Parent $Exe
+    $root = Split-Path -Parent $dir
+    $probe = @($dir, $root)
+    $hasFile = {
+        param([string]$Name)
+        foreach ($p in $probe) {
+            if (Test-Path -LiteralPath (Join-Path $p $Name)) { return $true }
+        }
+        return $false
+    }
+
+    $hasSteam = (& $hasFile 'steam_api64.dll') -or (& $hasFile 'steam_api.dll')
+    $hasEos = (& $hasFile 'EOSSDK-Win64-Shipping.dll')
+    $hasMs = (& $hasFile 'MicrosoftGame.config') -or (& $hasFile 'appxmanifest.xml')
+    if ($Exe -match 'XboxGames|WindowsApps|Program Files\\WindowsApps') { $hasMs = $true }
+
+    if ($hasMs -and -not $hasEos -and -not $hasSteam) {
+        $result.Kind = 'gamepass'
+        $result.Supported = $false
+        $result.Hint = 'Copia Xbox Game Pass / Microsoft Store. Peacock NON la supporta (file cifrati, il patcher non aggancia). Usa la copia Epic, non quella dell''app Xbox.'
+        return $result
+    }
+    if ($hasEos -and -not $hasSteam) {
+        $result.Kind = 'epic'
+        $result.NeedProcess = 'EpicGamesLauncher'
+        $result.Hint = 'Copia Epic. Steam NON serve. Lascia Epic Games Launcher aperto e loggato (internet al login). Poi Gioca.cmd.'
+        return $result
+    }
+    if ($hasSteam) {
+        $result.Kind = 'steam'
+        $result.NeedProcess = 'steam'
+        $result.Hint = 'Copia Steam. Lascia Steam aperto e loggato (internet al login).'
+        return $result
+    }
+    if ($hasEos) {
+        $result.Kind = 'epic'
+        $result.NeedProcess = 'EpicGamesLauncher'
+        $result.Hint = 'Copia Epic. Steam NON serve. Lascia Epic Games Launcher aperto e loggato.'
+        return $result
+    }
+    return $result
+}
+
+function Test-PlatformLauncherRunning {
+    param($Platform)
+    if (-not $Platform -or -not $Platform.NeedProcess) { return $true }
+    $names = @($Platform.NeedProcess)
+    if ($Platform.Kind -eq 'epic') { $names += 'EpicWebHelper' }
+    $proc = Get-Process -Name $names -ErrorAction SilentlyContinue
+    return [bool]$proc
+}
+
 function Find-HitmanExe {
     param([string]$Configured)
     $guesses = @(
         $Configured,
         'C:\Games\HITMAN - World of Assassination\Retail\HITMAN3.exe',
         'C:\Program Files (x86)\Steam\steamapps\common\HITMAN 3\Retail\HITMAN3.exe',
-        'C:\Program Files\Epic Games\HITMAN3\Retail\HITMAN3.exe'
+        'C:\Program Files\Epic Games\HITMAN3\Retail\HITMAN3.exe',
+        'C:\Program Files\Epic Games\HITMAN World of Assassination\Retail\HITMAN3.exe',
+        'C:\Program Files\Epic Games\HITMANWOA\Retail\HITMAN3.exe'
     )
     foreach ($g in $guesses) {
         if ($g -and (Test-Path -LiteralPath $g)) { return $g }

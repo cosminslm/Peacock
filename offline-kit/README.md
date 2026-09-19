@@ -66,14 +66,16 @@ Peacock **è** il server di gioco. Dopo il patch, HITMAN parla solo con `127.0.0
 
 Limiti:
 
-- Al **primo** login Peacock può interrogare Steam/IOI per la lista DLC (`entP`). Fai **un** avvio con Steam/Epic online, entra in gioco, esci. Il profilo resta in `userdata\` dentro la cartella Peacock.
+- Al **primo** login Peacock interroga il *negozio da cui proviene l'exe* (Epic o Steam), non Xbox, per la lista DLC (`entP`). Internet + launcher di quella piattaforma aperti. Poi il profilo resta in `userdata\` nella cartella Peacock.
+- **Epic** (il tuo caso se non hai Steam): Epic Games Launcher aperto e loggato. Steam **non** serve.
+- **Xbox Game Pass / Microsoft Store**: Peacock **non** lo supporta. Non usare l'exe dell'app Xbox.
 - Poi puoi impostare (lo fa `Gioca.cmd` se `applyOfflineOptions` è true):
   - `updateChecking=false`
   - `leaderboards=false`
   - `imageLoading=OFFLINE`
 - I contratti featured/user nuovi non si scaricano senza rete. Campagna, escalation, mastery, freelancer sul profilo locale restano.
 
-Steam in modalità offline va bene **dopo** che il gioco è stato lanciato almeno una volta su quella macchina.
+Dopo il primo login con il launcher della tua piattaforma, quel launcher può anche andare offline.
 
 ## Perché non compilare questa repo
 

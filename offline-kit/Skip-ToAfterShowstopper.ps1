@@ -98,7 +98,7 @@ foreach ($f in $files) {
 }
 
 Write-Host ''
-Write-Host 'Test locale: solo Gioca.cmd (admin), Steam aperto.' -ForegroundColor Cyan
+Write-Host 'Test locale: solo Gioca.cmd (admin). Se la copia e Epic: Epic Launcher aperto e loggato (Steam non serve).' -ForegroundColor Cyan
 Write-Host 'Nel Hub: Parigi deve risultare giocata. Prossima storia: Sapienza (World of Tomorrow).' -ForegroundColor Cyan
 Write-Host 'Niente Carica/Continua. Planning -> Start su Sapienza.' -ForegroundColor Cyan
 Write-Host ''

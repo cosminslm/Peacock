@@ -114,9 +114,21 @@ if ($exe) {
     $gi = Get-Item -LiteralPath $exe
     Write-Ok "$($gi.FullName)"
     Write-Info "Ultima modifica EXE: $($gi.LastWriteTime.ToString('yyyy-MM-dd HH:mm'))  size=$($gi.Length)"
+    $plat = Get-HitmanPlatform $exe
+    Write-Info ("Piattaforma file: {0}" -f $plat.Kind)
+    Write-Host ("         {0}" -f $plat.Hint) -ForegroundColor DarkYellow
+    if (-not $plat.Supported) {
+        [void]$issues.Add('Game Pass / Microsoft Store non e supportato da Peacock. Usa la copia Epic (HITMAN3.exe con EOSSDK, non quello dell''app Xbox).')
+    } elseif (-not (Test-PlatformLauncherRunning $plat)) {
+        if ($plat.Kind -eq 'epic') {
+            [void]$issues.Add('Apri Epic Games Launcher e fai login (internet). Steam non serve.')
+        } elseif ($plat.Kind -eq 'steam') {
+            [void]$issues.Add('Apri Steam e fai login (internet).')
+        }
+    }
     if ($gi.LastWriteTime.Year -le 2023) {
         Write-WarnLine 'Build del gioco del 2023. Funziona con Peacock 6.5.x; con 8.9.x il patcher usa AOB scan (di solito ok).'
-        Write-Host '         Consiglio: aggiorna il gioco (Steam/Epic) e usa SOLO Peacock 8.9.1 packaged.' -ForegroundColor DarkYellow
+        Write-Host '         Consiglio: aggiorna il gioco dal launcher della TUA piattaforma (Epic, non Xbox) e usa SOLO Peacock 8.9.1 packaged.' -ForegroundColor DarkYellow
     }
     $okCount++
 } else {

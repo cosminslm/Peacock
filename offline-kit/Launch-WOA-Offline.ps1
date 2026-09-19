@@ -48,6 +48,27 @@ foreach ($f in @($patcher, $node, $chunk)) {
 }
 
 $game = Find-HitmanExe $cfg.gameExe
+$plat = Get-HitmanPlatform $game
+if ($game) {
+    Write-Step 'Piattaforma del gioco (non IOI)'
+    Write-Info ("Rilevata: {0}  ->  {1}" -f $plat.Kind, $game)
+    Write-Host $plat.Hint -ForegroundColor Cyan
+    if (-not $plat.Supported) {
+        Write-ErrLine 'Questa copia non e usabile con Peacock. Ferma qui.'
+        if ($Host.Name -eq 'ConsoleHost') { [void][System.Console]::ReadKey($true) }
+        exit 1
+    }
+    if (-not (Test-PlatformLauncherRunning $plat)) {
+        if ($plat.Kind -eq 'epic') {
+            Write-WarnLine 'Epic Games Launcher NON e in esecuzione. Aprilo, fai login (internet), poi rilancia Gioca.cmd. Steam non c entra.'
+        } elseif ($plat.Kind -eq 'steam') {
+            Write-WarnLine 'Steam NON e in esecuzione. Aprilo e loggati, poi rilancia Gioca.cmd.'
+        }
+    } else {
+        if ($plat.Kind -eq 'epic') { Write-Ok 'Epic Games Launcher in esecuzione.' }
+        elseif ($plat.Kind -eq 'steam') { Write-Ok 'Steam in esecuzione.' }
+    }
+}
 if ($cfg.launchGame -and -not $game) {
     Write-WarnLine 'HITMAN3.exe non trovato: avvio solo server + patcher. Imposta gameExe in config.json.'
 }

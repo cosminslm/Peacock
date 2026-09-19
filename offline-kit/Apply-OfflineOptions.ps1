@@ -10,7 +10,7 @@ $dir = Resolve-PackagedPeacockDir
 Set-OfflineFriendlyOptions $dir
 Restore-OwnedWoaEntitlements $dir
 Write-Host ''
-Write-Host 'Nota: al primo avvio Peacock puo comunque tentare di leggere i DLC da Steam/IOI.' -ForegroundColor DarkGray
+Write-Host 'Nota: al primo avvio Peacock puo leggere i DLC da Epic o Steam (il negozio dell exe), non da Xbox Game Pass.' -ForegroundColor DarkGray
 Write-Host 'Dopo un login riuscito, il profilo in userdata\ conserva gli unlock e puoi giocare offline.' -ForegroundColor DarkGray
 if ($Host.Name -eq 'ConsoleHost') {
     Write-Host 'Premi un tasto per chiudere...' -ForegroundColor DarkGray
