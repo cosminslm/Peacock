@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 # che Peacock capisce (options.ini). Non tocca HITMAN3.exe.
 
 $module = Join-Path $PSScriptRoot 'lib\PeacockOffline.psm1'
-Import-Module $module -Force
+Import-Module $module -Force -DisableNameChecking
 
 Write-Host ''
 Write-Host '  PROFILO LOCALE  (niente Steam, niente IOI Continua)' -ForegroundColor Magenta
@@ -15,6 +15,13 @@ Write-Host ''
 
 $peacock = Resolve-PackagedPeacockDir
 Write-Ok $peacock
+$cfg = Read-OfflineConfig
+if ($cfg.peacockDir -ne $peacock) {
+    $cfg.peacockDir = $peacock
+    $cfg.preferredInstallDir = $peacock
+    Save-OfflineConfig $cfg
+}
+Write-AllPeacockCopies
 
 Write-Step '1. Le uniche righe da scrivere: options.ini di Peacock'
 Set-OfflineFriendlyOptions $peacock

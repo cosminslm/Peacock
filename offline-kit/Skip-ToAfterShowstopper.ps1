@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 # Does NOT grant weapons/mastery. Close the game and Peacock first.
 
 $module = Join-Path $PSScriptRoot 'lib\PeacockOffline.psm1'
-Import-Module $module -Force
+Import-Module $module -Force -DisableNameChecking
 
 Write-Host ''
 Write-Host '  SALTO: dopo la sfilata di Parigi  ->  prossima Sapienza' -ForegroundColor Magenta

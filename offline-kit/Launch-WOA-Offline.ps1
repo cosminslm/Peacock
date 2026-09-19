@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $module = Join-Path $PSScriptRoot 'lib\PeacockOffline.psm1'
-Import-Module $module -Force
+Import-Module $module -Force -DisableNameChecking
 
 if (-not (Request-Administrator -ScriptPath $PSCommandPath)) {
     exit 0
@@ -80,10 +80,12 @@ if ($cfg.applyOfflineOptions) {
 Write-Step 'Pacchetti WOA (entitlement, NON sblocca armi/mastery)'
 Restore-OwnedWoaEntitlements $peacockDir
 
+Write-AllPeacockCopies
+
 Write-Host ''
-Write-Host 'I progressi (XP, missioni, save Peacock) stanno qui:' -ForegroundColor Yellow
-Write-Host "  $peacockDir\userdata"
-Write-Host "  $peacockDir\contractSessions"
+Write-Host 'SALVATAGGIO SOLO QUI (se giochi su un altro Peacock, i progressi spariscono):' -ForegroundColor Yellow
+Write-Host "  $peacockDir\userdata\users"
+Write-Host (Get-UserdataSummary $peacockDir) -ForegroundColor Yellow
 Write-Host 'Usa SEMPRE questa stessa cartella. Non aprire ScaricaRelease.cmd a ogni partita.' -ForegroundColor Yellow
 
 Write-Step 'Porta 80'
@@ -91,8 +93,15 @@ $owner = Get-Port80Owner
 $serverProc = $null
 $alreadyUp = $false
 if (Test-HttpLocalhost -HostName $cfg.serverUrl) {
-    Write-Info 'Un server risponde gia su http://127.0.0.1/ - riutilizzo quello.'
-    $alreadyUp = $true
+    if (Test-Port80IsThisPeacock $peacockDir) {
+        Write-Ok 'Server gia in ascolto DA QUESTA cartella Peacock. Lo riuso.'
+        $alreadyUp = $true
+    } else {
+        Write-ErrLine "Porta 80 occupata da un ALTRO server ($owner)."
+        Write-Host "I salvataggi andrebbero in un'altra cartella. Chiudi OGNI finestra 'Peacock Server' / node, poi rilancia Gioca.cmd."
+        if ($Host.Name -eq 'ConsoleHost') { [void][System.Console]::ReadKey($true) }
+        exit 1
+    }
 } elseif ($owner) {
     Write-ErrLine "Porta 80 occupata da $owner e non risponde come Peacock."
     Write-Host 'Chiudi IIS / altro web server, poi rilancia.'
@@ -156,4 +165,5 @@ Write-Step 'Salvataggio profilo (attendo 8s, Peacock scrive ogni 3s)'
 Start-Sleep -Seconds 8
 Stop-OwnedProcess $patcherProc
 if ($serverProc) { Stop-OwnedProcess $serverProc }
-Write-Ok 'Chiuso. Prossima volta: solo Gioca.cmd (tasto destro, amministratore).'
+Write-Host (Get-UserdataSummary $peacockDir) -ForegroundColor Yellow
+Write-Ok 'Chiuso. Controlla che data/ora del JSON siano di ADESSO. Prossima volta: solo Gioca.cmd (admin).'

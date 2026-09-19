@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Continue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $module = Join-Path $PSScriptRoot 'lib\PeacockOffline.psm1'
-Import-Module $module -Force
+Import-Module $module -Force -DisableNameChecking
 
 Write-Host ''
 Write-Host '  PEACOCK / HITMAN WOA  -  DIAGNOSTICA OFFLINE' -ForegroundColor Magenta

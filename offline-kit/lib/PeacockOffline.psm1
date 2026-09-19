@@ -21,13 +21,13 @@ function Get-ConfigPath {
 
 function Get-DefaultConfig {
     [pscustomobject]@{
-        peacockDir           = ''
+        peacockDir           = 'C:\Games\HITMAN - World of Assassination\Peacock'
         gameExe              = 'C:\Games\HITMAN - World of Assassination\Retail\HITMAN3.exe'
         serverUrl            = '127.0.0.1'
         launchGame           = $true
         stopOnGameExit       = $false
         applyOfflineOptions  = $true
-        preferredInstallDir  = ''
+        preferredInstallDir  = 'C:\Games\HITMAN - World of Assassination\Peacock'
     }
 }
 
@@ -160,11 +160,17 @@ function Get-CandidatePeacockDirs {
     return $list
 }
 
-function Get-UserdataScore {
+function Get-PlayerProfileFiles {
     param([string]$Dir)
     $users = Join-Path $Dir 'userdata\users'
-    if (-not (Test-Path -LiteralPath $users)) { return 0 }
-    $files = @(Get-ChildItem -LiteralPath $users -Filter '*.json' -ErrorAction SilentlyContinue)
+    if (-not (Test-Path -LiteralPath $users)) { return @() }
+    return @(Get-ChildItem -LiteralPath $users -Filter '*.json' -ErrorAction SilentlyContinue |
+        Where-Object { $_.BaseName -ne 'lop' })
+}
+
+function Get-UserdataScore {
+    param([string]$Dir)
+    $files = @(Get-PlayerProfileFiles $Dir)
     if ($files.Count -eq 0) { return 0 }
     $bytes = ($files | Measure-Object -Property Length -Sum).Sum
     return [int](1000 + $files.Count * 10 + [Math]::Min($bytes, 5000000) / 1000)
@@ -172,17 +178,42 @@ function Get-UserdataScore {
 
 function Get-UserdataSummary {
     param([string]$Dir)
-    $users = Join-Path $Dir 'userdata\users'
-    if (-not (Test-Path -LiteralPath $users)) { return 'nessun profilo in userdata\users' }
-    $files = @(Get-ChildItem -LiteralPath $users -Filter '*.json' -ErrorAction SilentlyContinue)
-    if ($files.Count -eq 0) { return 'cartella userdata vuota' }
-    $names = $files | ForEach-Object { $_.BaseName.Substring(0, [Math]::Min(8, $_.BaseName.Length)) }
-    return ("{0} profilo/i: {1}" -f $files.Count, ($names -join ', '))
+    $files = @(Get-PlayerProfileFiles $Dir)
+    if ($files.Count -eq 0) { return 'nessun profilo giocatore in userdata\users' }
+    $bits = $files | ForEach-Object {
+        '{0} ({1} byte, {2})' -f $_.BaseName.Substring(0, [Math]::Min(8, $_.BaseName.Length)), $_.Length, $_.LastWriteTime.ToString('yyyy-MM-dd HH:mm')
+    }
+    return ("{0} profilo/i: {1}" -f $files.Count, ($bits -join ' | '))
+}
+
+function Write-AllPeacockCopies {
+    Write-Step 'Tutte le copie Peacock su questo PC'
+    $n = 0
+    foreach ($dir in (Get-CandidatePeacockDirs)) {
+        if (-not (Test-IsPackagedPeacock $dir)) { continue }
+        $n++
+        $ver = Get-PeacockVersionFromDir $dir
+        Write-Host ("  [{0}] v{1}" -f $n, $ver)
+        Write-Host ("       {0}" -f $dir)
+        Write-Host ("       {0}" -f (Get-UserdataSummary $dir))
+    }
+    if ($n -gt 1) {
+        Write-WarnLine 'C e PIU DI UNA copia. I salvataggi stanno SOLO nella cartella del server avviato. Le altre sono ignorate.'
+    }
+    if ($n -eq 0) { Write-Info 'Nessuna release packaged trovata.' }
 }
 
 function Resolve-PackagedPeacockDir {
     param([switch]$AllowMissing)
     $cfg = Read-OfflineConfig
+    $pinned = @(
+        $cfg.peacockDir,
+        'C:\Games\HITMAN - World of Assassination\Peacock'
+    )
+    foreach ($dir in $pinned) {
+        if ($dir -and (Test-IsPackagedPeacock $dir)) { return $dir }
+    }
+
     $packaged = @()
     foreach ($dir in (Get-CandidatePeacockDirs)) {
         if (Test-IsPackagedPeacock $dir) { $packaged += $dir }
@@ -192,10 +223,8 @@ function Resolve-PackagedPeacockDir {
         throw 'Nessuna installazione Peacock PRONTA (packaged) trovata.'
     }
 
-    # Prefer the folder that already has a player profile (mission/XP saves).
     $ranked = $packaged | Sort-Object -Property @{ Expression = { Get-UserdataScore $_ } } -Descending
-    $best = $ranked | Select-Object -First 1
-    return $best
+    return ($ranked | Select-Object -First 1)
 }
 
 function Get-ProtectedPeacockNames {
@@ -352,7 +381,7 @@ function Restore-OwnedWoaEntitlements {
         return
     }
     $owned = Get-OwnedWoaEntitlementIds
-    $files = @(Get-ChildItem -LiteralPath $usersDir -Filter '*.json' -ErrorAction SilentlyContinue)
+    $files = @(Get-PlayerProfileFiles $PeacockDir)
     foreach ($f in $files) {
         $raw = Get-Content -LiteralPath $f.FullName -Raw -Encoding UTF8
         $current = New-Object System.Collections.Generic.List[string]
@@ -573,6 +602,27 @@ function Get-Port80Owner {
     } catch {
         return $null
     }
+}
+
+function Test-Port80IsThisPeacock {
+    param([string]$PeacockDir)
+    if (-not $PeacockDir) { return $false }
+    $want = [IO.Path]::GetFullPath($PeacockDir).TrimEnd('\')
+    try {
+        $conns = Get-NetTCPConnection -LocalPort 80 -State Listen -ErrorAction Stop
+        $pids = @($conns | Select-Object -ExpandProperty OwningProcess -Unique)
+        foreach ($procId in $pids) {
+            try {
+                $proc = Get-Process -Id $procId -ErrorAction Stop
+                $path = $null
+                try { $path = $proc.Path } catch {}
+                if (-not $path) { continue }
+                $full = [IO.Path]::GetFullPath($path)
+                if ($full.StartsWith($want, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+            } catch {}
+        }
+    } catch {}
+    return $false
 }
 
 function Set-OfflineFriendlyOptions {
