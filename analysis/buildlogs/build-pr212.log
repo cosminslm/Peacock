@@ -1,0 +1,33 @@
+=== building pr212 (refs/pull/212/head) ===
+curl exit: 0 size: 217280
+tar exit: 0
+src dir: /tmp/isrc/innoextract-refs-pull-212-head
+-- Checking compiler flag: -Wundef
+-- Checking compiler flag: -Wunused-const-variable=1
+-- Checking compiler flag: -Wunused-macros
+-- Checking compiler flag: -Wvla
+-- Checking compiler flag: -Wold-style-cast
+-- Checking compiler flag: -Wshadow
+-- Checking linker flag: -Wl,--no-undefined
+-- Checking compiler flag: -Wmaybe-uninitialized
+-- Checking compiler flag: -Wno-maybe-uninitialized
+-- Checking linker flag: -Wl,--as-needed
+-- Checking compiler flag: -g2
+-- Checking compiler flag: -ffast-math
+-- Could NOT find Doxygen (missing: DOXYGEN_EXECUTABLE) 
+-- Found Python: /usr/bin/python3.12 (found version "3.12.3") found components: Interpreter
+-- Checking for module 'liblzma'
+--   Package 'liblzma', required by 'virtual:world', not found
+CMake Error at /usr/local/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake:233 (message):
+  Could NOT find LZMA (missing: LZMA_LIBRARY LZMA_INCLUDE_DIR)
+Call Stack (most recent call first):
+  /usr/local/share/cmake-3.31/Modules/FindPackageHandleStandardArgs.cmake:603 (_FPHSA_FAILURE_MESSAGE)
+  cmake/FindLZMA.cmake:87 (find_package_handle_standard_args)
+  CMakeLists.txt:165 (find_package)
+
+
+-- Configuring incomplete, errors occurred!
+cmake exit: 1
+make: *** No targets specified and no makefile found.  Stop.
+make exit: 2
+binary missing
