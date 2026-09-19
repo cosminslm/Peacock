@@ -1,0 +1,109 @@
+=== version strings bundled ===
+"version":"3.13.0"
+8.57.0
+8.0.0
+=== version strings official v8.9.1 ===
+"version":"3.13.0"
+=== diffstat (beautified) ===
+lines added: 7607, removed: 7168
+=== first 100 lines of diff ===
+33381c33381
+<     commandService: () => Up
+---
+>     commandService: () => Pp
+33582,33584c33582,33583
+<     CRACKVERSTRING: () => vu,
+<     DEFAULT_MASTERY_MAXLEVEL: () => Wu,
+<     EVERGREEN_LEVEL_INFO: () => ep,
+---
+>     DEFAULT_MASTERY_MAXLEVEL: () => Yu,
+>     EVERGREEN_LEVEL_INFO: () => Xu,
+33586c33585
+<     LATEST_PROFILE_VERSION: () => Fu,
+---
+>     LATEST_PROFILE_VERSION: () => xu,
+33588c33587
+<     SNIPER_LEVEL_INFO: () => ip,
+---
+>     SNIPER_LEVEL_INFO: () => ep,
+33590,33598c33589,33597
+<     XP_PER_LEVEL: () => zu,
+<     addDashesToPublicId: () => Cp,
+<     attainableDefaults: () => up,
+<     castUserProfile: () => lp,
+<     checkForUpdates: () => Yu,
+<     clampValue: () => op,
+<     contractCreationTutorialId: () => xu,
+<     contractTypes: () => ku,
+<     defaultSuits: () => dp,
+---
+>     XP_PER_LEVEL: () => Vu,
+>     addDashesToPublicId: () => gp,
+>     attainableDefaults: () => cp,
+>     castUserProfile: () => op,
+>     checkForUpdates: () => Fu,
+>     clampValue: () => ip,
+>     contractCreationTutorialId: () => Qu,
+>     contractTypes: () => Bu,
+>     defaultSuits: () => np,
+33600,33630c33599,33629
+<     difficultyToString: () => Ap,
+<     evergreenLevelForXp: () => tp,
+<     extractResourcesVersion: () => Lp,
+<     extractServerVersion: () => Np,
+<     extractToken: () => qu,
+<     fastClone: () => Ep,
+<     gameDifficulty: () => fp,
+<     getMaxProfileLevel: () => Xu,
+<     getRemoteService: () => Vu,
+<     getSublocations: () => hp,
+<     getUpdateTag: () => ju,
+<     handleAxiosError: () => mp,
+<     hitmapsUrl: () => $p,
+<     isObjectiveActive: () => Ip,
+<     isSniperLocation: () => cp,
+<     isSuit: () => Tp,
+<     isTrueForEveryElement: () => Op,
+<     levelForXp: () => Zu,
+<     nilUuid: () => pp,
+<     parseAppTicket: () => Pp,
+<     parsePageNumber: () => Rp,
+<     publicIdRegex: () => Hu,
+<     sniperLevelForXp: () => rp,
+<     unlockLevelComparer: () => bp,
+<     unlockOrderComparer: () => gp,
+<     uuidRegex: () => Bu,
+<     versions: () => Qu,
+<     vrTutorialId: () => _p,
+<     xpRequiredForEvergreenLevel: () => ap,
+<     xpRequiredForLevel: () => Ju,
+<     xpRequiredForSniperLevel: () => sp
+---
+>     difficultyToString: () => Ip,
+>     evergreenLevelForXp: () => Zu,
+>     extractResourcesVersion: () => Sp,
+>     extractServerVersion: () => yp,
+>     extractToken: () => ju,
+>     fastClone: () => bp,
+>     gameDifficulty: () => _p,
+>     getMaxProfileLevel: () => qu,
+>     getRemoteService: () => Ku,
+>     getSublocations: () => Ep,
+>     handleAxiosError: () => fp,
+>     hitmapsUrl: () => dp,
+>     isObjectiveActive: () => pp,
+>     isSniperLocation: () => sp,
+>     isSuit: () => Cp,
+>     isTrueForEveryElement: () => Tp,
+>     jokes: () => $p,
+>     levelForXp: () => Wu,
+>     nilUuid: () => lp,
+>     parseAppTicket: () => Rp,
+>     parsePageNumber: () => Np,
+>     publicIdRegex: () => ku,
+>     sniperLevelForXp: () => tp,
+>     unlockLevelComparer: () => mp,
+>     unlockOrderComparer: () => Ap,
+>     uuidRegex: () => vu,
+>     versions: () => Hu,
+>     vrTutorialId: () => up,
