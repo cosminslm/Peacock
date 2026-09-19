@@ -23,57 +23,46 @@ jobs:
         run: |
           set +e
           mkdir -p analysis/buildlogs
-          sudo apt-get update > analysis/buildlogs/apt.log 2>&1
-          sudo apt-get install -y p7zip-full cmake g++ \
-            libboost-iostreams-dev libboost-filesystem-dev libboost-system-dev \
-            libboost-program-options-dev libboost-date-time-dev liblzma-dev >> analysis/buildlogs/apt.log 2>&1
-          echo "apt exit: $?" >> analysis/buildlogs/apt.log
-          which cmake g++ 7z >> analysis/buildlogs/apt.log 2>&1
+          sudo apt-get update > analysis/buildlogs/apt2.log 2>&1
+          sudo apt-get install -y cmake g++ libboost-iostreams-dev libboost-filesystem-dev \
+            libboost-system-dev libboost-program-options-dev libboost-date-time-dev \
+            liblzma-dev >> analysis/buildlogs/apt2.log 2>&1
           exit 0
 
-      - name: Build innoextract variants
+      - name: Build dscho PR (Inno 6.4-7.0.2 support)
         run: |
           set +e
           cd /tmp
-          for REF in "master:master" "pr214:refs/pull/214/head" "pr212:refs/pull/212/head"; do
-            NAME="${REF%%:*}"; REFSPEC="${REF#*:}"
-            LOG="$GITHUB_WORKSPACE/analysis/buildlogs/build-$NAME.log"
-            {
-              echo "=== building $NAME ($REFSPEC) ==="
-              curl -sL -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/$REFSPEC"
-              echo "curl exit: $? size: $(stat -c%s src.tar.gz 2>/dev/null)"
-              [ -s src.tar.gz ] || { echo "download failed for $NAME"; continue; }
-              rm -rf /tmp/isrc && mkdir -p /tmp/isrc
-              tar xzf src.tar.gz -C /tmp/isrc
-              echo "tar exit: $?"
-              D=$(find /tmp/isrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
-              echo "src dir: $D"
-              [ -n "$D" ] || continue
-              mkdir -p "$D/build"
-              cd "$D/build"
-              cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -25
-              echo "cmake exit: ${PIPESTATUS[0]}"
-              make -j4 2>&1 | tail -25
-              echo "make exit: ${PIPESTATUS[0]}"
-              ls -la innoextract 2>/dev/null || echo "binary missing"
-              cd /tmp
-            } > "$LOG" 2>&1
-            [ -f "$D/build/innoextract" ] && cp "$D/build/innoextract" /tmp/innoextract-$NAME
-          done
-          ls -la /tmp/innoextract-* 2>/dev/null || echo "NO BINARIES BUILT"
+          LOG="$GITHUB_WORKSPACE/analysis/buildlogs/build-dscho.log"
+          {
+            curl -sL -o dscho.tar.gz "https://codeload.github.com/dscho/innoextract/tar.gz/refs/heads/inno-6.4-to-6.7-support"
+            echo "curl exit: $? size: $(stat -c%s dscho.tar.gz 2>/dev/null)"
+            rm -rf /tmp/dsrc && mkdir -p /tmp/dsrc
+            tar xzf dscho.tar.gz -C /tmp/dsrc
+            D=$(find /tmp/dsrc -maxdepth 1 -type d -name "innoextract-*" | head -1)
+            echo "src dir: $D"
+            mkdir -p "$D/build" && cd "$D/build"
+            cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -10
+            make -j4 2>&1 | tail -10
+            ls -la innoextract
+          } > "$LOG" 2>&1
+          [ -f "$D/build/innoextract" ] && cp "$D/build/innoextract" /tmp/innoextract-dscho
+          ls -la /tmp/innoextract-dscho 2>/dev/null || echo "BUILD FAILED"
           exit 0
 
-      - name: Run innoextract variants on the file
+      - name: List and extract with dscho build
         run: |
           set +e
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          for BIN in /tmp/innoextract-*; do
-            [ -x "$BIN" ] || continue
-            N=$(basename "$BIN")
-            "$BIN" -i "$F" > "analysis/inno-info-$N.txt" 2>&1
-            "$BIN" -l "$F" > "analysis/inno-list-$N.txt" 2>&1
-            "$BIN" -s -d /tmp/extracted-$N "$F" > "analysis/inno-extract-$N.log" 2>&1
-          done
+          B=/tmp/innoextract-dscho
+          [ -x "$B" ] || exit 0
+          "$B" -i "$F" > analysis/inno-info-dscho.txt 2>&1
+          "$B" -l "$F" > analysis/inno-list-dscho.txt 2>&1
+          "$B" -d /tmp/extracted "$F" > analysis/inno-extract-dscho.log 2>&1
+          echo "=== INFO ==="; cat analysis/inno-info-dscho.txt
+          echo "=== LIST (first 80) ==="; head -80 analysis/inno-list-dscho.txt
+          echo "=== extracted tree ==="; find /tmp/extracted -type f 2>/dev/null | head -100
+          du -sh /tmp/extracted 2>/dev/null
           exit 0
 
       - name: Commit analysis back
@@ -82,7 +71,7 @@ jobs:
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A analysis/
-          git commit -m "chore: innoextract build logs + extraction attempt [skip ci]"
+          git commit -m "chore: dscho innoextract analysis (Inno 7 support) [skip ci]"
           git pull --rebase origin arena/01a0babf-peacock || true
           git push origin arena/01a0babf-peacock || true
           exit 0
