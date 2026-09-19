@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y cmake g++ libboost-iostreams-dev libboost-filesystem-dev \
             libboost-system-dev libboost-program-options-dev libboost-date-time-dev \
-            liblzma-dev unzip nodejs
+            liblzma-dev unzip
           exit 0
 
       - name: Build dscho innoextract (Inno 7 support)
@@ -39,7 +39,7 @@ jobs:
           mkdir -p "$D/build" && cd "$D/build"
           cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cm.log 2>&1
           make -j4 > /tmp/mk.log 2>&1
-          [ -f innoextract ] && cp innoextract /tmp/inno && echo "BUILT OK" || { echo BUILD FAILED; tail -5 /tmp/cm.log /tmp/mk.log; }
+          [ -f innoextract ] && cp innoextract /tmp/inno
           exit 0
 
       - name: Extract installer
@@ -48,71 +48,104 @@ jobs:
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
           rm -rf /tmp/extracted && mkdir -p /tmp/extracted
           /tmp/inno -d /tmp/extracted "$F" > /dev/null 2>&1
-          ls /tmp/extracted/app/Peacock/
-          sha256sum /tmp/extracted/app/Peacock/chunk0.js
+          ls -la /tmp/extracted/app/Retail/
           exit 0
 
-      - name: Match chunk0.js against recent official Peacock releases
+      - name: Decompile Launcher.exe and embedded PeacockPatcher.Core.dll
         run: |
           set +e
-          mkdir -p /tmp/rel
-          BUNDLED=$(sha256sum /tmp/extracted/app/Peacock/chunk0.js | cut -d' ' -f1)
-          BUNDLEDB=$(sha256sum /tmp/extracted/app/Peacock/webui/dist/assets/index-NtA75SgD.js | cut -d' ' -f1)
-          {
-            echo "bundled chunk0.js  : $BUNDLED"
-            echo "bundled webui main : $BUNDLEDB"
-            echo ""
-            for TAG in $(curl -s "https://api.github.com/repos/thepeacockproject/Peacock/tags?per_page=15" | grep -oE '"name": "v[^"]+"' | cut -d'"' -f4); do
-              ASSET="Peacock-${TAG}.zip"
-              curl -sL -o rel.zip "https://github.com/thepeacockproject/Peacock/releases/download/${TAG}/${ASSET}"
-              SZ=$(stat -c%s rel.zip 2>/dev/null)
-              if [ "$SZ" -lt 1000000 ]; then echo "$TAG: download failed ($SZ bytes)"; continue; fi
-              rm -rf /tmp/relx && mkdir -p /tmp/relx && cd /tmp/relx && unzip -o -q /tmp/rel.zip
-              CH=$(find /tmp/relx -name chunk0.js -exec sha256sum {} \; | head -1 | cut -d' ' -f1)
-              WI=$(find /tmp/relx -path "*webui/dist/assets/index-*.js" -exec sha256sum {} \; | head -1 | cut -d' ' -f1)
-              MATCH=""; [ "$CH" = "$BUNDLED" ] && MATCH=" <== chunk0.js MATCH!"
-              WM=""; [ "$WI" = "$BUNDLEDB" ] && WM=" <== webui MATCH!"
-              echo "$TAG: chunk0=$CH webui=$WI$MATCH$WM"
-              cd /tmp
-            done
-          } > "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt" 2>&1
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt"
+          mkdir -p "$GITHUB_WORKSPACE/analysis/decompiled"
+          # extract costura-compressed embedded assemblies with python
+          python3 - <<'EOF'
+          import struct, zlib, re, os
+          data = open('/tmp/extracted/app/Retail/Launcher.exe','rb').read()
+          # .NET resources: find compressed costura blobs heuristically:
+          # costura stores each as a .NET embedded resource, zlib raw-deflate.
+          # Search for resource names in UTF-16 (metadata strings)
+          names = re.findall(rb'(?:c\x00o\x00s\x00t\x00u\x00r\x00a\x00\.[^\x00]{1,80}?\x00)', data)
+          print("resource name strings found:", len(names))
+          for n in names:
+              print("  ", n.decode('utf-16-le', errors='replace'))
+          # try raw deflate scan around manifest resources is complex; instead use dotnet to list resources
+          EOF
+          # use dotnet (preinstalled) to enumerate and extract resources
+          cat > /tmp/dumpres.csx <<'EOF'
+          EOF
+          dotnet --list-sdks
+          dotnet tool install -g ilspycmd 2>&1 | tail -1
+          export PATH="$PATH:/home/runner/.dotnet/tools"
+          mkdir -p /tmp/decom
+          ilspycmd -p -o /tmp/decom/launcher /tmp/extracted/app/Retail/Launcher.exe > /tmp/ilsy.log 2>&1
+          echo "ilspy exit: $?"
+          ls /tmp/decom/launcher 2>/dev/null
+          # extract costura embedded dlls: use mono? simpler: python with pefile-less approach via System.Reflection is not available;
+          # try: ilspycmd can list resources
+          ilspycmd -l r /tmp/extracted/app/Retail/Launcher.exe 2>/dev/null | head -30
           exit 0
 
-      - name: If no exact match, diff bundled chunk0.js vs v8.9.1
+      - name: Extract costura blobs and decompile
         run: |
           set +e
-          grep -q "MATCH" "$GITHUB_WORKSPACE/analysis/extracted-info/release-match.txt" && { echo "exact match found, skipping diff"; exit 0; }
-          curl -sL -o /tmp/p891.zip "https://github.com/thepeacockproject/Peacock/releases/download/v8.9.1/Peacock-v8.9.1.zip"
-          rm -rf /tmp/p891 && mkdir -p /tmp/p891 && cd /tmp/p891 && unzip -o -q /tmp/p891.zip
-          OFF=$(find /tmp/p891 -name chunk0.js | head -1)
-          sudo apt-get install -y nodejs >/dev/null 2>&1
-          npx --yes js-beautify /tmp/extracted/app/Peacock/chunk0.js > /tmp/bundled.pretty.js 2>/dev/null
-          npx --yes js-beautify "$OFF" > /tmp/official.pretty.js 2>/dev/null
-          wc -l /tmp/bundled.pretty.js /tmp/official.pretty.js
-          {
-            echo "=== version strings bundled ==="
-            grep -oE '"version": ?"[0-9.]+"|"PEACOCK_VERSION[^,]{0,40}|version: ?"[0-9.]+"' /tmp/bundled.pretty.js | head -5
-            grep -m2 -oE 'v8\.[0-9]+\.[0-9]+|8\.[0-9]+\.[0-9]+' /tmp/bundled.pretty.js | head -5
-            echo "=== version strings official v8.9.1 ==="
-            grep -oE '"version": ?"[0-9.]+"|PEACOCK_VERSION[^,]{0,40}' /tmp/official.pretty.js | head -5
-            echo "=== diffstat (beautified) ==="
-            diff /tmp/bundled.pretty.js /tmp/official.pretty.js > /tmp/chunk.diff
-            echo "lines added: $(grep -c '^>' /tmp/chunk.diff), removed: $(grep -c '^<' /tmp/chunk.diff)"
-            echo "=== first 100 lines of diff ==="
-            head -100 /tmp/chunk.diff
-          } > "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-diff.txt" 2>&1
-          cp /tmp/chunk.diff "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-full-diff.txt" 2>/dev/null
-          cat "$GITHUB_WORKSPACE/analysis/extracted-info/chunk0-diff.txt"
+          export PATH="$PATH:/home/runner/.dotnet/tools"
+          # write a tiny C# program to dump embedded resources
+          mkdir -p /tmp/dumper && cd /tmp/dumper
+          dotnet new console -o . --force > /dev/null 2>&1
+          cat > Program.cs <<'EOF'
+          using System;
+          using System.IO;
+          using System.Reflection;
+
+          class P {
+            static void Main(string[] args) {
+              var asm = Assembly.LoadFile(args[0]);
+              foreach (var rn in asm.GetManifestResourceNames()) {
+                Console.WriteLine("RESOURCE: " + rn);
+                using var s = asm.GetManifestResourceStream(rn);
+                using var ms = new MemoryStream();
+                s.CopyTo(ms);
+                File.WriteAllBytes("/tmp/res_" + rn.Replace('/', '_'), ms.ToArray());
+              }
+            }
+          }
+          EOF
+          dotnet run -- /tmp/extracted/app/Retail/Launcher.exe > /tmp/dump.log 2>&1
+          cat /tmp/dump.log
+          ls -la /tmp/res_* 2>/dev/null
+          # costura .compressed = raw deflate
+          python3 - <<'EOF'
+          import zlib, glob
+          for p in glob.glob('/tmp/res_*.compressed'):
+              raw = open(p,'rb').read()
+              try:
+                  out = zlib.decompress(raw, -15)
+                  dst = p.replace('.compressed','')
+                  open(dst,'wb').write(out)
+                  print("decompressed", dst, len(out))
+              except Exception as e:
+                  print("fail", p, e)
+          EOF
+          ls -la /tmp/res_*.dll 2>/dev/null
+          for DLL in /tmp/res_*.dll; do
+            [ -f "$DLL" ] || continue
+            B=$(basename "$DLL")
+            ilspycmd -p -o "/tmp/decom/$B" "$DLL" > /dev/null 2>&1
+            echo "decompiled $B"
+          done
+          # copy all decompiled sources to workspace
+          cp -r /tmp/decom/* "$GITHUB_WORKSPACE/analysis/decompiled/" 2>/dev/null
+          find "$GITHUB_WORKSPACE/analysis/decompiled" -type f | head -20
+          # show the interesting code
+          echo "================ PeacockPatcher.Core decompiled ================"
+          find /tmp/decom -name "*.cs" | xargs grep -l "Peacock" 2>/dev/null | head -5
           exit 0
 
-      - name: Commit analysis back
+      - name: Commit decompiled analysis
         run: |
           set +e
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A analysis/
-          git commit -m "chore: match chunk0.js against official Peacock releases [skip ci]"
+          git commit -m "chore: decompile Launcher.exe + embedded PeacockPatcher.Core [skip ci]"
           git pull --rebase origin arena/01a0babf-peacock || true
           git push origin arena/01a0babf-peacock || true
           exit 0
