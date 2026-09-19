@@ -14,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Check out branch
+        uses: actions/checkout@v4
+        with:
+          ref: arena/01a0babf-peacock
+
       - name: Download file from pixeldrain
         run: |
           set -x
