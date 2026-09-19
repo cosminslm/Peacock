@@ -19,21 +19,32 @@ jobs:
         with:
           ref: arena/01a0babf-peacock
 
-      - name: Download file from pixeldrain
+      - name: Install innoextract
+        run: |
+          sudo apt-get update -qq || true
+          sudo apt-get install -y innoextract || sudo apt-get install -y innoextract=1.9*
+
+      - name: Analyze installer (list contents, no execution)
         run: |
           set -x
-          curl -L --fail --retry 3 -o "HITMAN_3_Patch_3.280.0_V2.exe" "https://pixeldrain.com/api/file/UQTKRLeX?download"
-          ls -la
-          file "HITMAN_3_Patch_3.280.0_V2.exe" || true
-          sha256sum "HITMAN_3_Patch_3.280.0_V2.exe"
-          md5sum "HITMAN_3_Patch_3.280.0_V2.exe"
+          mkdir -p analysis
+          F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
+          {
+            echo "=== sha256 ==="; sha256sum "$F"
+            echo "=== md5 ==="; md5sum "$F"
+            echo "=== innoextract info ==="
+            innoextract -i "$F" || true
+            echo "=== innoextract file list ==="
+            innoextract -l "$F" || true
+            echo "=== innoextract languages ==="
+            innoextract -m "$F" || true
+          } > analysis/report.txt 2>&1 || true
+          cat analysis/report.txt
 
-      - name: Commit file to session branch
+      - name: Commit analysis back
         run: |
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p fetched
-          mv "HITMAN_3_Patch_3.280.0_V2.exe" fetched/
-          git add fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          git commit -m "chore: fetch HITMAN 3 Patch 3.280.0 V2.exe from pixeldrain [skip ci]"
+          git add analysis/report.txt
+          git commit -m "chore: innoextract analysis of HITMAN 3 patch installer [skip ci]"
           git push origin arena/01a0babf-peacock
