@@ -10,41 +10,62 @@ permissions:
   contents: write
 
 jobs:
-  fetch:
+  analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Check out branch
         uses: actions/checkout@v4
         with:
           ref: arena/01a0babf-peacock
 
-      - name: Install innoextract
+      - name: 7-Zip listing
         run: |
           sudo apt-get update -qq || true
-          sudo apt-get install -y innoextract || sudo apt-get install -y innoextract=1.9*
-
-      - name: Analyze installer (list contents, no execution)
-        run: |
-          set -x
-          mkdir -p analysis
+          sudo apt-get install -y p7zip-full
           F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
-          {
-            echo "=== sha256 ==="; sha256sum "$F"
-            echo "=== md5 ==="; md5sum "$F"
-            echo "=== innoextract info ==="
-            innoextract -i "$F" || true
-            echo "=== innoextract file list ==="
-            innoextract -l "$F" || true
-            echo "=== innoextract languages ==="
-            innoextract -m "$F" || true
-          } > analysis/report.txt 2>&1 || true
-          cat analysis/report.txt
+          mkdir -p analysis
+          7z l "$F" > analysis/7z-listing.txt 2>&1 || true
+          7z l -slt "$F" > analysis/7z-listing-slt.txt 2>&1 || true
+          tail -60 analysis/7z-listing.txt
+
+      - name: Build innoextract from PR branch (Inno 6.4-6.6 support)
+        run: |
+          cd /tmp
+          for PR in 214 212 208; do
+            echo "=== trying PR $PR ==="
+            curl -sL --fail -o src.tar.gz "https://codeload.github.com/dscharrer/innoextract/tar.gz/refs/pull/$PR/head" || continue
+            tar xzf src.tar.gz
+            D=$(ls -d innoextract-*/ | head -1)
+            cd "$D"
+            mkdir -p build && cd build
+            cmake .. -DCMAKE_BUILD_TYPE=Release > /tmp/cmake-$PR.log 2>&1 && make -j4 > /tmp/make-$PR.log 2>&1
+            if [ -f innoextract ]; then
+              echo "PR $PR built OK"
+              cp innoextract /tmp/innoextract-$PR
+            else
+              echo "PR $PR build FAILED (see logs)"; tail -5 /tmp/cmake-$PR.log /tmp/make-$PR.log
+            fi
+            cd /tmp && rm -rf innoextract-*
+          done
+
+      - name: Try extracting with new innoextract
+        run: |
+          F=fetched/HITMAN_3_Patch_3.280.0_V2.exe
+          for PR in 214 212 208; do
+            if [ -f /tmp/innoextract-$PR ]; then
+              echo "=== PR $PR ==="
+              /tmp/innoextract-$PR -i "$F" > analysis/inno-info-pr$PR.txt 2>&1 || true
+              /tmp/innoextract-$PR -l "$F" > analysis/inno-list-pr$PR.txt 2>&1 || true
+              head -40 analysis/inno-info-pr$PR.txt
+              head -60 analysis/inno-list-pr$PR.txt
+            fi
+          done
 
       - name: Commit analysis back
         run: |
           git config user.name "arena-ai-coding-agent[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add analysis/report.txt
-          git commit -m "chore: innoextract analysis of HITMAN 3 patch installer [skip ci]"
+          git add analysis/
+          git commit -m "chore: deep analysis of HITMAN 3 patch installer [skip ci]" || echo "nothing to commit"
           git push origin arena/01a0babf-peacock
