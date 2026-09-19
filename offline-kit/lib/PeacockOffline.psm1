@@ -291,6 +291,100 @@ function Ensure-PackagedPeacock {
     return $dest
 }
 
+function Get-OwnedWoaEntitlementIds {
+    # Steam app + DLC ids AND Epic GUIDs that Peacock checks in inventory.ts.
+    # This restores PACK OWNERSHIP (maps/modes visible). It does NOT grant
+    # mastery unlocks, suits, or freelancer upgrades.
+    @(
+        '1659040',
+        '1829580', '1829581', '1829582', '1829583', '1829584', '1829585', '1829586',
+        '1829590', '1829591', '1829595', '1829596', '1829605',
+        '1843460',
+        '2184790', '2184791',
+        '2828470', '2973650', '3110360', '3254350', '3711140',
+        '3957470', '4097630', '4328240', '4542910', '4621250', '4911210', '4944070',
+        '06d4d61bbb774ca99c1661bee04fbde0',
+        '2e4ad3e9aa9b4dcfa709b3f3b44cbf94',
+        'a9b1afdd05584441aeec75ba230b2e54',
+        '66246e4364134f4689da72e9c6731687',
+        '4216cdf59dbc4f19af227be076520202',
+        '8a690003855745e884d5040c6bc9ede8',
+        'bc610b36c75442299edcbe99f6f0fb60',
+        '5d06a6c6af9b4875b3530d5328f61287',
+        '0b59243cb8aa420691b66be1ecbe68c0',
+        '894d1e6771044f48a8fdde934b8e443a',
+        'e698e1a4b63947b0bc9349a5ae2dc015',
+        '391d08a543dc43a083eb50246916a291',
+        'afa4b921503f43339c360d4b53910791',
+        '6408de14f7dc46b9a33adcf6cbc4d159',
+        'a3509775467d4d6a8a7adffe518dc204',
+        '84a1a6fda4fb48afbb78ee9b2addd475',
+        '08d2bc4d20754191b6c488541d2b4fa1',
+        'a1e9a63fa4f3425aa66b9b8fa3c9cc35',
+        '28455871cd0d4ffab52f557cc012ea5e',
+        '0e8632b4cdfb415e94291d97d727b98d',
+        '3f9adc216dde44dda5e829f11740a0a2',
+        'aece009ff59441c0b526f8aa69e24cfb',
+        'dfe5aeb89976450ba1e0e2c208b63d33',
+        '30107bff80024d1ab291f9cd3bac9fac',
+        '9e936ed2507a473db6f53ad24d2da587',
+        '0403062df0d347619c8dcf043c65c02e',
+        '9220c020262f420da06eb46a4b1ce86f',
+        '6cdf07da030d4f66acd50eaf3cd234c7',
+        'f04198e0ffcf49079b5ec77bb6b66891',
+        '70a9afcc8de84b6ab0f2b45b2018559b',
+        '256eeeb3d8044aa1840e1606d268e0b2',
+        '04cb1b3e5b424308be25236f6bc1b2fb',
+        '0047ddcd5e6846e881f1037c1416e3d9',
+        'b135c766d25948c39d7dd316dbc4db53',
+        '16bcef4f91674b00ba3d7f2d4f629cec',
+        'd51a3a65928841d5b4cabad20a865006',
+        '7b3bf47c436644ea8fea4f95317d431c',
+        'd396d245e23a401b8422116db9026a27'
+    )
+}
+
+function Restore-OwnedWoaEntitlements {
+    param([string]$PeacockDir)
+    $usersDir = Join-Path $PeacockDir 'userdata\users'
+    if (-not (Test-Path -LiteralPath $usersDir)) {
+        Write-Info 'Nessun profilo userdata ancora. Avvia una volta il gioco, chiudi, rilancia Gioca.cmd.'
+        return
+    }
+    $owned = Get-OwnedWoaEntitlementIds
+    $files = @(Get-ChildItem -LiteralPath $usersDir -Filter '*.json' -ErrorAction SilentlyContinue)
+    foreach ($f in $files) {
+        $raw = Get-Content -LiteralPath $f.FullName -Raw -Encoding UTF8
+        $current = New-Object System.Collections.Generic.List[string]
+        $m = [regex]::Match($raw, '"entP"\s*:\s*\[(?<body>[\s\S]*?)\]')
+        if ($m.Success) {
+            [regex]::Matches($m.Groups['body'].Value, '"([^"]+)"') | ForEach-Object {
+                [void]$current.Add($_.Groups[1].Value)
+            }
+        }
+        foreach ($id in $owned) {
+            if (-not $current.Contains($id)) { [void]$current.Add($id) }
+        }
+        $idsJson = ($current | ForEach-Object { '            "' + $_ + '"' }) -join ",`r`n"
+        $entBlock = '"entP": [' + "`r`n" + $idsJson + "`r`n        ]"
+        if ($m.Success) {
+            $raw = $raw.Remove($m.Index, $m.Length).Insert($m.Index, $entBlock)
+        } elseif ($raw -match '"Extensions"\s*:\s*\{') {
+            $raw = [regex]::Replace($raw, '("Extensions"\s*:\s*\{)', ('$1' + "`r`n        " + $entBlock + ','), 1)
+        } else {
+            Write-WarnLine "Profilo $($f.Name): Extensions assente, salto."
+            continue
+        }
+        $raw = [regex]::Replace($raw, '"IsFSPUser"\s*:\s*true', '"IsFSPUser": false')
+        $bak = $f.FullName + '.bak'
+        if (-not (Test-Path -LiteralPath $bak)) {
+            Copy-Item -LiteralPath $f.FullName -Destination $bak
+        }
+        Set-Content -LiteralPath $f.FullName -Value $raw -Encoding UTF8
+        Write-Ok ("Profilo {0}: {1} entitlement (mappe/modi visibili; mastery invariata)." -f $f.BaseName.Substring(0, 8), $current.Count)
+    }
+}
+
 function Try-AddDefenderExclusion {
     param([string]$Dir)
     if (-not (Test-IsAdministrator)) { return }

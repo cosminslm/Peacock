@@ -56,6 +56,9 @@ if ($cfg.applyOfflineOptions) {
     Set-OfflineFriendlyOptions $peacockDir
 }
 
+Write-Step 'Pacchetti WOA (entitlement, NON sblocca armi/mastery)'
+Restore-OwnedWoaEntitlements $peacockDir
+
 Write-Host ''
 Write-Host 'I progressi (XP, missioni, save Peacock) stanno qui:' -ForegroundColor Yellow
 Write-Host "  $peacockDir\userdata"
