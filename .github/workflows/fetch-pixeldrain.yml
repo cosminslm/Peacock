@@ -1,9 +1,6 @@
 name: fetch-pixeldrain
 
 on:
-  push:
-    branches:
-      - arena/01a0babf-peacock
   workflow_dispatch:
 
 permissions:
